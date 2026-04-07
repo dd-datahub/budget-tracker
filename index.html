@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💰 Budget Tracker</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Sarabun', 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    input, select, button { font-family: inherit; }
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #1e293b; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    .modal-scroll { max-height: 90vh; overflow-y: auto; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useMemo } = React;
+const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+const INCOME_COLOR  = "#10b981";
+const EXPENSE_COLOR = "#f43f5e";
+const BALANCE_COLOR = "#6366f1";
+
+const INIT_CATS = [
+  { id:"c1",  type:"income",  name:"เงินเดือน",       color:"#10b981" },
+  { id:"c2",  type:"income",  name:"โบนัส",            color:"#34d399" },
+  { id:"c3",  type:"income",  name:"รายได้อื่นๆ",      color:"#6ee7b7" },
+  { id:"c4",  type:"expense", name:"อาหาร",            color:"#f43f5e" },
+  { id:"c5",  type:"expense", name:"เดินทาง",          color:"#fb923c" },
+  { id:"c6",  type:"expense", name:"ที่พัก",           color:"#fbbf24" },
+  { id:"c7",  type:"expense", name:"สุขภาพ",           color:"#a78bfa" },
+  { id:"c8",  type:"expense", name:"ความบันเทิง",      color:"#38bdf8" },
+  { id:"c9",  type:"expense", name:"ช้อปปิ้ง",         color:"#f472b6" },
+  { id:"c10", type:"expense", name:"ค่าสาธารณูปโภค",  color:"#94a3b8" },
+  { id:"c11", type:"expense", name:"การศึกษา",         color:"#4ade80" },
+  { id:"c12", type:"expense", name:"อื่นๆ",            color:"#cbd5e1" },
+];
+
+const COLOR_PALETTE = [
+  "#10b981","#34d399","#6ee7b7","#f43f5e","#fb923c","#fbbf24",
+  "#a78bfa","#38bdf8","#f472b6","#94a3b8","#4ade80","#cbd5e1",
+  "#6366f1","#ec4899","#14b8a6","#f97316","#84cc16","#06b6d4",
+  "#8b5cf6","#ef4444","#22c55e","#3b82f6","#d946ef","#eab308",
+];
+
+const MONTHS      = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+const MONTHS_FULL = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+
+const fmt = n => new Intl.NumberFormat("th-TH",{style:"currency",currency:"THB",maximumFractionDigits:0}).format(n);
+const uid = () => "cat_" + Math.random().toString(36).slice(2,9);
+const today = () => new Date().toISOString().slice(0,10);
+const formatDate = d => { const [y,m,day]=d.split("-"); return `${day}/${m}/${(+y+543).toString().slice(2)}`; };
+
+const SAMPLE = [
+  {id:1, date:"2026-01-05",type:"income", category:"เงินเดือน",      desc:"เงินเดือนมกราคม",    amount:45000},
+  {id:2, date:"2026-01-10",type:"expense",category:"ที่พัก",         desc:"ค่าเช่าบ้าน",         amount:8000},
+  {id:3, date:"2026-01-15",type:"expense",category:"อาหาร",          desc:"ค่าอาหาร",            amount:2500},
+  {id:4, date:"2026-01-20",type:"expense",category:"เดินทาง",        desc:"น้ำมันรถ",             amount:1800},
+  {id:5, date:"2026-01-25",type:"expense",category:"ค่าสาธารณูปโภค",desc:"ค่าไฟ+น้ำ",           amount:1200},
+  {id:6, date:"2026-02-05",type:"income", category:"เงินเดือน",      desc:"เงินเดือนกุมภาพันธ์", amount:45000},
+  {id:7, date:"2026-02-10",type:"expense",category:"ที่พัก",         desc:"ค่าเช่าบ้าน",         amount:8000},
+  {id:8, date:"2026-02-14",type:"expense",category:"ความบันเทิง",    desc:"วาเลนไทน์",           amount:3500},
+  {id:9, date:"2026-02-20",type:"income", category:"โบนัส",          desc:"โบนัสพิเศษ",          amount:10000},
+  {id:10,date:"2026-03-05",type:"income", category:"เงินเดือน",      desc:"เงินเดือนมีนาคม",    amount:45000},
+  {id:11,date:"2026-03-08",type:"expense",category:"สุขภาพ",         desc:"ค่าหมอ",              amount:2000},
+  {id:12,date:"2026-03-15",type:"expense",category:"ช้อปปิ้ง",       desc:"เสื้อผ้า",            amount:4500},
+  {id:13,date:"2026-04-05",type:"income", category:"เงินเดือน",      desc:"เงินเดือนเมษายน",    amount:45000},
+  {id:14,date:"2026-04-07",type:"expense",category:"อาหาร",          desc:"สงกรานต์",            amount:3000},
+];
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+const S = {
+  card:      {background:"#1e293b",borderRadius:14,padding:"18px 20px",border:"1px solid #334155"},
+  cardTitle: {fontSize:15,fontWeight:700,color:"#f1f5f9",marginBottom:16},
+  input:     {background:"#0f172a",border:"1px solid #334155",borderRadius:8,padding:"9px 12px",color:"#f1f5f9",fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"},
+  label:     {display:"block",color:"#94a3b8",fontSize:12,fontWeight:600,marginBottom:6},
+  navBtn:    {background:"rgba(255,255,255,.15)",border:"none",color:"#fff",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:14},
+  cancelBtn: {flex:1,padding:"10px 0",borderRadius:10,border:"1px solid #334155",background:"transparent",color:"#94a3b8",cursor:"pointer",fontWeight:600,fontSize:14},
+  primaryBtn:{flex:2,padding:"10px 0",borderRadius:10,border:"none",background:"#6366f1",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:15},
+  modalBox:  {background:"#1e293b",borderRadius:16,padding:28,width:"min(440px,95vw)",boxShadow:"0 20px 60px rgba(0,0,0,.5)",border:"1px solid #334155"},
+};
+const iconBtn = bg => ({background:bg+"22",border:"none",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:14});
+
+// ── Sub-components ─────────────────────────────────────────────────────────────
+function Overlay({children}) {
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}}>{children}</div>;
+}
+function KpiCard({icon,label,value,color}) {
+  return (
+    <div style={{...S.card,borderTop:`3px solid ${color}`}}>
+      <div style={{fontSize:22,marginBottom:6}}>{icon}</div>
+      <div style={{color:"#94a3b8",fontSize:12,marginBottom:4}}>{label}</div>
+      <div style={{color,fontSize:20,fontWeight:800}}>{value}</div>
+    </div>
+  );
+}
+function TxRow({t,colorMap,onEdit,onDelete}) {
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#0f172a",borderRadius:10}}>
+      <div style={{width:34,height:34,borderRadius:"50%",background:(colorMap[t.category]||"#64748b")+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>
+        {t.type==="income"?"💹":"💸"}
+      </div>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontWeight:600,fontSize:13,color:"#f1f5f9",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.desc||t.category}</div>
+        <div style={{fontSize:11,color:"#64748b"}}>{t.category} • {formatDate(t.date)}</div>
+      </div>
+      <div style={{fontWeight:700,fontSize:14,color:t.type==="income"?INCOME_COLOR:EXPENSE_COLOR,flexShrink:0}}>
+        {t.type==="expense"?"-":"+"}{fmt(t.amount)}
+      </div>
+      <button onClick={()=>onEdit(t)} style={iconBtn("#6366f1")}>✏️</button>
+      <button onClick={()=>onDelete(t)} style={{...iconBtn("#f43f5e"),marginLeft:2}}>🗑️</button>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────────────
+function App() {
+  const [transactions, setTransactions] = useState(SAMPLE);
+  const [categories,   setCategories]   = useState(INIT_CATS);
+  const [activeTab,    setActiveTab]    = useState("dashboard");
+  const [viewYear,     setViewYear]     = useState(2026);
+  const [viewMonth,    setViewMonth]    = useState(3);
+
+  // tx modal
+  const [showModal,     setShowModal]     = useState(false);
+  const [editItem,      setEditItem]      = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [form, setForm] = useState({date:today(),type:"income",category:"เงินเดือน",desc:"",amount:""});
+
+  // cat modal
+  const [showCatModal,      setShowCatModal]      = useState(false);
+  const [editCat,           setEditCat]           = useState(null);
+  const [deleteCatConfirm,  setDeleteCatConfirm]  = useState(null);
+  const [catForm, setCatForm] = useState({type:"income",name:"",color:COLOR_PALETTE[0]});
+  const [catFilter, setCatFilter] = useState("all");
+
+  // filters
+  const [filterType, setFilterType] = useState("all");
+  const [filterCat,  setFilterCat]  = useState("all");
+  const [searchText, setSearchText] = useState("");
+
+  const incomeCats  = useMemo(()=>categories.filter(c=>c.type==="income"),  [categories]);
+  const expenseCats = useMemo(()=>categories.filter(c=>c.type==="expense"), [categories]);
+  const colorMap    = useMemo(()=>Object.fromEntries(categories.map(c=>[c.name,c.color])), [categories]);
+
+  const years = useMemo(()=>{
+    const s=new Set(transactions.map(t=>+t.date.slice(0,4)));
+    return [...s].sort();
+  },[transactions]);
+
+  const yearSummary = useMemo(()=>years.map(y=>{
+    const rows=transactions.filter(t=>+t.date.slice(0,4)===y);
+    const income=rows.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+    const expense=rows.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
+    return {year:y,income,expense,balance:income-expense};
+  }),[transactions,years]);
+
+  const monthSummary = useMemo(()=>MONTHS.map((m,idx)=>{
+    const rows=transactions.filter(t=>+t.date.slice(0,4)===viewYear&&+t.date.slice(5,7)-1===idx);
+    const income=rows.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+    const expense=rows.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
+    return {month:m,monthFull:MONTHS_FULL[idx],idx,income,expense,balance:income-expense};
+  }),[transactions,viewYear]);
+
+  const monthTx = useMemo(()=>
+    transactions.filter(t=>+t.date.slice(0,4)===viewYear&&+t.date.slice(5,7)-1===viewMonth)
+      .sort((a,b)=>b.date.localeCompare(a.date)),
+  [transactions,viewYear,viewMonth]);
+
+  const dashStats = useMemo(()=>{
+    const yr=transactions.filter(t=>+t.date.slice(0,4)===viewYear);
+    const totalIncome=yr.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+    const totalExpense=yr.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
+    const catTotals={};
+    yr.filter(t=>t.type==="expense").forEach(t=>{catTotals[t.category]=(catTotals[t.category]||0)+t.amount;});
+    return {totalIncome,totalExpense,balance:totalIncome-totalExpense,
+      pieData:Object.entries(catTotals).map(([k,v])=>({name:k,value:v}))};
+  },[transactions,viewYear]);
+
+  const filteredTx = useMemo(()=>
+    transactions.filter(t=>{
+      if(filterType!=="all"&&t.type!==filterType) return false;
+      if(filterCat!=="all"&&t.category!==filterCat) return false;
+      if(searchText&&!t.desc.toLowerCase().includes(searchText.toLowerCase())&&!t.category.includes(searchText)) return false;
+      return true;
+    }).sort((a,b)=>b.date.localeCompare(a.date)),
+  [transactions,filterType,filterCat,searchText]);
+
+  const filteredCats = useMemo(()=>catFilter==="all"?categories:categories.filter(c=>c.type===catFilter),[categories,catFilter]);
+
+  // ── TX handlers ──
+  function openAdd() {
+    setEditItem(null);
+    setForm({date:today(),type:"income",category:incomeCats[0]?.name||"",desc:"",amount:""});
+    setShowModal(true);
+  }
+  function openEdit(item) {
+    setEditItem(item);
+    setForm({date:item.date,type:item.type,category:item.category,desc:item.desc,amount:String(item.amount)});
+    setShowModal(true);
+  }
+  function saveForm() {
+    if(!form.date||!form.amount||isNaN(+form.amount)||+form.amount<=0) return;
+    if(editItem) {
+      setTransactions(prev=>prev.map(t=>t.id===editItem.id?{...t,...form,amount:+form.amount}:t));
+    } else {
+      const newId=Math.max(0,...transactions.map(t=>t.id))+1;
+      setTransactions(prev=>[...prev,{id:newId,...form,amount:+form.amount}]);
+      const y=+form.date.slice(0,4);
+      if(y!==viewYear) setViewYear(y);
+    }
+    setShowModal(false);
+  }
+  function deleteItem(id) { setTransactions(prev=>prev.filter(t=>t.id!==id)); setDeleteConfirm(null); }
+  function handleTypeChange(v) {
+    const first=v==="income"?incomeCats[0]?.name:expenseCats[0]?.name;
+    setForm(f=>({...f,type:v,category:first||""}));
+  }
+
+  // ── CAT handlers ──
+  function openAddCat() { setEditCat(null); setCatForm({type:"income",name:"",color:COLOR_PALETTE[0]}); setShowCatModal(true); }
+  function openEditCat(cat) { setEditCat(cat); setCatForm({type:cat.type,name:cat.name,color:cat.color}); setShowCatModal(true); }
+  function saveCat() {
+    if(!catForm.name.trim()) return;
+    if(editCat) {
+      const oldName=editCat.name, newName=catForm.name.trim();
+      setCategories(prev=>prev.map(c=>c.id===editCat.id?{...c,name:newName,color:catForm.color,type:catForm.type}:c));
+      if(oldName!==newName) setTransactions(prev=>prev.map(t=>t.category===oldName?{...t,category:newName}:t));
+    } else {
+      if(categories.some(c=>c.name===catForm.name.trim())) return;
+      setCategories(prev=>[...prev,{id:uid(),type:catForm.type,name:catForm.name.trim(),color:catForm.color}]);
+    }
+    setShowCatModal(false);
+  }
+  function deleteCat() {
+    if(!deleteCatConfirm) return;
+    setCategories(prev=>prev.filter(c=>c.id!==deleteCatConfirm.cat.id));
+    setDeleteCatConfirm(null);
+  }
+
+  const formCats = form.type==="income"?incomeCats:expenseCats;
+  const tabs = [["dashboard","📊"],["transactions","📋"],["monthly","📅"],["yearly","📆"],["categories","🏷️"]];
+  const tabLabels = {dashboard:"Dashboard",transactions:"รายการ",monthly:"รายเดือน",yearly:"รายปี",categories:"หมวดหมู่"};
+
+  return (
+    <div style={{fontFamily:"'Sarabun','Segoe UI',sans-serif",background:"#0f172a",minHeight:"100vh",color:"#e2e8f0"}}>
+
+      {/* Header */}
+      <div style={{background:"linear-gradient(135deg,#1e40af,#7c3aed)",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:24}}>💰</span>
+          <div>
+            <div style={{fontSize:16,fontWeight:700}}>Budget Tracker</div>
+            <div style={{fontSize:11,opacity:.75}}>บันทึกรายรับ-รายจ่าย</div>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <button onClick={()=>setViewYear(y=>y-1)} style={S.navBtn}>◀</button>
+          <span style={{fontSize:16,fontWeight:700,minWidth:50,textAlign:"center"}}>{viewYear}</span>
+          <button onClick={()=>setViewYear(y=>y+1)} style={S.navBtn}>▶</button>
+          <button onClick={openAdd} style={{marginLeft:8,background:"#10b981",border:"none",color:"#fff",padding:"7px 14px",borderRadius:10,fontWeight:700,cursor:"pointer",fontSize:13}}>
+            + เพิ่ม
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Bar */}
+      <div style={{background:"#1e293b",display:"flex",padding:"6px 12px",gap:4,borderBottom:"1px solid #334155",overflowX:"auto"}}>
+        {tabs.map(([k,icon])=>(
+          <button key={k} onClick={()=>setActiveTab(k)} style={{
+            background:activeTab===k?"#6366f1":"transparent",
+            border:"none",color:activeTab===k?"#fff":"#94a3b8",
+            padding:"7px 12px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:12,
+            whiteSpace:"nowrap",transition:"all .2s"
+          }}>{icon} {tabLabels[k]}</button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{padding:"16px",maxWidth:1100,margin:"0 auto"}}>
+
+        {/* DASHBOARD */}
+        {activeTab==="dashboard" && (
+          <div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+              <KpiCard icon="💹" label="รายรับทั้งปี"  value={fmt(dashStats.totalIncome)}  color={INCOME_COLOR} />
+              <KpiCard icon="💸" label="รายจ่ายทั้งปี" value={fmt(dashStats.totalExpense)} color={EXPENSE_COLOR} />
+              <KpiCard icon="🏦" label="คงเหลือ"       value={fmt(dashStats.balance)}      color={dashStats.balance>=0?BALANCE_COLOR:"#f43f5e"} />
+            </div>
+
+            <div style={{...S.card,marginBottom:16}}>
+              <div style={S.cardTitle}>รายรับ-รายจ่ายรายเดือน {viewYear}</div>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={monthSummary} margin={{top:5,right:10,bottom:0,left:0}}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="month" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:11}} />
+                  <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:10}} tickFormatter={v=>(v/1000)+"k"} />
+                  <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8}} />
+                  <Legend wrapperStyle={{color:"#94a3b8",fontSize:12}} />
+                  <Bar dataKey="income"  name="รายรับ"  fill={INCOME_COLOR}  radius={[4,4,0,0]} />
+                  <Bar dataKey="expense" name="รายจ่าย" fill={EXPENSE_COLOR} radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1.4fr",gap:12}}>
+              <div style={S.card}>
+                <div style={S.cardTitle}>สัดส่วนรายจ่าย</div>
+                {dashStats.pieData.length>0?(
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie data={dashStats.pieData} cx="50%" cy="50%" outerRadius={65} dataKey="value" nameKey="name"
+                        label={({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+                        {dashStats.pieData.map((e,i)=><Cell key={i} fill={colorMap[e.name]||"#6366f1"} />)}
+                      </Pie>
+                      <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8}} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ):<div style={{textAlign:"center",color:"#64748b",padding:30}}>ไม่มีข้อมูล</div>}
+              </div>
+              <div style={S.card}>
+                <div style={S.cardTitle}>ยอดคงเหลือสะสม</div>
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={monthSummary.map((m,i)=>({...m,cum:monthSummary.slice(0,i+1).reduce((s,x)=>s+x.balance,0)}))}
+                    margin={{top:5,right:10,bottom:0,left:0}}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis dataKey="month" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:11}} />
+                    <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:10}} tickFormatter={v=>(v/1000)+"k"} />
+                    <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8}} />
+                    <Line type="monotone" dataKey="cum" name="คงเหลือสะสม" stroke={BALANCE_COLOR} strokeWidth={2.5} dot={{fill:BALANCE_COLOR,r:3}} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TRANSACTIONS */}
+        {activeTab==="transactions" && (
+          <div>
+            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+              <input placeholder="🔍 ค้นหา..." value={searchText} onChange={e=>setSearchText(e.target.value)}
+                style={{...S.input,flex:1,minWidth:140}} />
+              <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{...S.input,width:"auto"}}>
+                <option value="all">ทั้งหมด</option>
+                <option value="income">รายรับ</option>
+                <option value="expense">รายจ่าย</option>
+              </select>
+              <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{...S.input,width:"auto"}}>
+                <option value="all">ทุกหมวด</option>
+                {categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+            </div>
+            <div style={{...S.card,padding:0,overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}}>
+                <thead>
+                  <tr style={{background:"#1e3a5f"}}>
+                    {["วันที่","ประเภท","หมวดหมู่","รายละเอียด","จำนวน",""].map(h=>(
+                      <th key={h} style={{padding:"10px 12px",textAlign:h==="จำนวน"?"right":"left",color:"#94a3b8",fontWeight:600,fontSize:12,borderBottom:"1px solid #334155"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTx.length===0&&<tr><td colSpan={6} style={{textAlign:"center",padding:28,color:"#64748b"}}>ไม่พบรายการ</td></tr>}
+                  {filteredTx.map(t=>(
+                    <tr key={t.id} style={{borderBottom:"1px solid #1e293b"}}
+                      onMouseEnter={e=>e.currentTarget.style.background="#1e293b"}
+                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <td style={{padding:"9px 12px",fontSize:12,color:"#94a3b8"}}>{formatDate(t.date)}</td>
+                      <td style={{padding:"9px 12px"}}>
+                        <span style={{background:t.type==="income"?"#064e3b":"#4c0519",color:t.type==="income"?"#34d399":"#fb7185",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:600}}>
+                          {t.type==="income"?"รายรับ":"รายจ่าย"}
+                        </span>
+                      </td>
+                      <td style={{padding:"9px 12px",fontSize:12}}>
+                        <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                          <span style={{width:7,height:7,borderRadius:"50%",background:colorMap[t.category]||"#64748b",flexShrink:0}}></span>
+                          {t.category}
+                        </span>
+                      </td>
+                      <td style={{padding:"9px 12px",fontSize:12,color:"#cbd5e1",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.desc||"—"}</td>
+                      <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:13,color:t.type==="income"?INCOME_COLOR:EXPENSE_COLOR}}>
+                        {t.type==="expense"?"-":"+"}{fmt(t.amount)}
+                      </td>
+                      <td style={{padding:"9px 12px",textAlign:"right",whiteSpace:"nowrap"}}>
+                        <button onClick={()=>openEdit(t)} style={iconBtn("#6366f1")}>✏️</button>
+                        <button onClick={()=>setDeleteConfirm(t)} style={{...iconBtn("#f43f5e"),marginLeft:3}}>🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{textAlign:"right",marginTop:6,color:"#64748b",fontSize:11}}>{filteredTx.length} รายการ</div>
+          </div>
+        )}
+
+        {/* MONTHLY */}
+        {activeTab==="monthly" && (
+          <div>
+            <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+              {MONTHS.map((m,i)=>(
+                <button key={i} onClick={()=>setViewMonth(i)} style={{
+                  padding:"6px 11px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:600,fontSize:12,
+                  background:viewMonth===i?"#6366f1":"#1e293b",color:viewMonth===i?"#fff":"#94a3b8",
+                  position:"relative",transition:"all .2s"
+                }}>
+                  {m}
+                  {monthSummary[i].income+monthSummary[i].expense>0&&(
+                    <span style={{position:"absolute",top:-2,right:-2,width:7,height:7,borderRadius:"50%",background:"#6366f1",border:"2px solid #0f172a"}}></span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:14}}>
+              <KpiCard icon="💹" label={`รายรับ ${MONTHS_FULL[viewMonth]}`}  value={fmt(monthSummary[viewMonth].income)}  color={INCOME_COLOR} />
+              <KpiCard icon="💸" label={`รายจ่าย ${MONTHS_FULL[viewMonth]}`} value={fmt(monthSummary[viewMonth].expense)} color={EXPENSE_COLOR} />
+              <KpiCard icon="🏦" label="คงเหลือ" value={fmt(monthSummary[viewMonth].balance)} color={monthSummary[viewMonth].balance>=0?BALANCE_COLOR:"#f43f5e"} />
+            </div>
+            <div style={S.card}>
+              <div style={S.cardTitle}>{MONTHS_FULL[viewMonth]} {viewYear}</div>
+              {monthTx.length===0
+                ?<div style={{textAlign:"center",color:"#64748b",padding:28}}>ไม่มีรายการในเดือนนี้</div>
+                :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {monthTx.map(t=><TxRow key={t.id} t={t} colorMap={colorMap} onEdit={openEdit} onDelete={setDeleteConfirm}/>)}
+                </div>
+              }
+            </div>
+          </div>
+        )}
+
+        {/* YEARLY */}
+        {activeTab==="yearly" && (
+          <div>
+            <div style={{...S.card,marginBottom:16}}>
+              <div style={S.cardTitle}>เปรียบเทียบทุกปี</div>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={yearSummary} margin={{top:5,right:10,bottom:0,left:0}}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="year" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:12}} />
+                  <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:10}} tickFormatter={v=>(v/1000)+"k"} />
+                  <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8}} />
+                  <Legend wrapperStyle={{color:"#94a3b8",fontSize:12}} />
+                  <Bar dataKey="income"  name="รายรับ"  fill={INCOME_COLOR}  radius={[4,4,0,0]} />
+                  <Bar dataKey="expense" name="รายจ่าย" fill={EXPENSE_COLOR} radius={[4,4,0,0]} />
+                  <Bar dataKey="balance" name="คงเหลือ" fill={BALANCE_COLOR} radius={[4,4,0,0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:14}}>
+              {yearSummary.map(y=>(
+                <div key={y.year} style={{...S.card,cursor:"pointer",borderLeft:`4px solid ${y.balance>=0?INCOME_COLOR:EXPENSE_COLOR}`}}
+                  onClick={()=>{setViewYear(y.year);setActiveTab("monthly");}}>
+                  <div style={{fontSize:18,fontWeight:700,marginBottom:10,color:"#f1f5f9"}}>{y.year}</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                    {[["💹 รายรับ",fmt(y.income),INCOME_COLOR],["💸 รายจ่าย",fmt(y.expense),EXPENSE_COLOR]].map(([l,v,c])=>(
+                      <div key={l} style={{display:"flex",justifyContent:"space-between"}}>
+                        <span style={{color:"#94a3b8",fontSize:12}}>{l}</span>
+                        <span style={{color:c,fontWeight:700,fontSize:13}}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{height:1,background:"#334155",margin:"2px 0"}} />
+                    <div style={{display:"flex",justifyContent:"space-between"}}>
+                      <span style={{color:"#94a3b8",fontSize:12}}>🏦 คงเหลือ</span>
+                      <span style={{color:y.balance>=0?INCOME_COLOR:EXPENSE_COLOR,fontWeight:700,fontSize:15}}>{fmt(y.balance)}</span>
+                    </div>
+                    {y.income>0&&(
+                      <div style={{marginTop:4}}>
+                        <div style={{fontSize:10,color:"#64748b",marginBottom:3}}>อัตราออม {((y.balance/y.income)*100).toFixed(1)}%</div>
+                        <div style={{background:"#334155",borderRadius:4,height:5}}>
+                          <div style={{width:`${Math.max(0,Math.min(100,(y.balance/y.income)*100))}%`,background:y.balance>=0?INCOME_COLOR:EXPENSE_COLOR,height:"100%",borderRadius:4}} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{marginTop:10,fontSize:11,color:"#64748b"}}>คลิกเพื่อดูรายเดือน →</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CATEGORIES */}
+        {activeTab==="categories" && (
+          <div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+              <div style={{display:"flex",gap:5}}>
+                {[["all","ทั้งหมด"],["income","💹 รายรับ"],["expense","💸 รายจ่าย"]].map(([v,lbl])=>(
+                  <button key={v} onClick={()=>setCatFilter(v)} style={{
+                    padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:12,
+                    background:catFilter===v?"#6366f1":"#1e293b",color:catFilter===v?"#fff":"#94a3b8"
+                  }}>{lbl}</button>
+                ))}
+              </div>
+              <button onClick={openAddCat} style={{background:"#6366f1",border:"none",color:"#fff",padding:"7px 14px",borderRadius:10,fontWeight:700,cursor:"pointer",fontSize:13}}>
+                + เพิ่มหมวดหมู่
+              </button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+              {filteredCats.map(cat=>{
+                const use=transactions.filter(t=>t.category===cat.name).length;
+                return (
+                  <div key={cat.id} style={{...S.card,borderLeft:`4px solid ${cat.color}`}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                      <div style={{width:26,height:26,borderRadius:"50%",background:cat.color,flexShrink:0}} />
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:13,color:"#f1f5f9"}}>{cat.name}</div>
+                        <div style={{fontSize:10,color:cat.type==="income"?INCOME_COLOR:"#fb923c"}}>
+                          {cat.type==="income"?"รายรับ":"รายจ่าย"}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>ใช้ใน {use} รายการ</div>
+                    <div style={{display:"flex",gap:5}}>
+                      <button onClick={()=>openEditCat(cat)} style={{flex:1,padding:"5px 0",borderRadius:7,border:"1px solid #6366f155",background:"#6366f111",color:"#a5b4fc",cursor:"pointer",fontWeight:600,fontSize:11}}>✏️ แก้ไข</button>
+                      <button onClick={()=>setDeleteCatConfirm({cat,usageCount:use})} style={{flex:1,padding:"5px 0",borderRadius:7,border:"1px solid #f43f5e55",background:"#f43f5e11",color:"#fda4af",cursor:"pointer",fontWeight:600,fontSize:11}}>🗑️ ลบ</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* MODAL รายการ */}
+      {showModal&&(
+        <Overlay>
+          <div style={S.modalBox} className="modal-scroll">
+            <div style={{fontSize:17,fontWeight:700,marginBottom:18,color:"#f1f5f9"}}>{editItem?"✏️ แก้ไขรายการ":"➕ เพิ่มรายการใหม่"}</div>
+            <label style={S.label}>วันที่</label>
+            <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} style={{...S.input,marginBottom:12}} />
+            <label style={S.label}>ประเภท</label>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              {[["income","💹 รายรับ"],["expense","💸 รายจ่าย"]].map(([v,lbl])=>(
+                <button key={v} onClick={()=>handleTypeChange(v)} style={{
+                  flex:1,padding:"9px 0",borderRadius:10,border:"2px solid",
+                  borderColor:form.type===v?(v==="income"?INCOME_COLOR:EXPENSE_COLOR):"#334155",
+                  background:form.type===v?(v==="income"?"#064e3b":"#4c0519"):"transparent",
+                  color:form.type===v?"#fff":"#94a3b8",fontWeight:700,cursor:"pointer",fontSize:13
+                }}>{lbl}</button>
+              ))}
+            </div>
+            <label style={S.label}>หมวดหมู่</label>
+            <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={{...S.input,marginBottom:12}}>
+              {formCats.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+            </select>
+            <label style={S.label}>รายละเอียด</label>
+            <input placeholder="บันทึกรายละเอียด..." value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} style={{...S.input,marginBottom:12}} />
+            <label style={S.label}>จำนวนเงิน (บาท)</label>
+            <input type="number" placeholder="0" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} style={{...S.input,marginBottom:18}} min="0" />
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setShowModal(false)} style={S.cancelBtn}>ยกเลิก</button>
+              <button onClick={saveForm} style={S.primaryBtn}>{editItem?"บันทึกการแก้ไข":"เพิ่มรายการ"}</button>
+            </div>
+          </div>
+        </Overlay>
+      )}
+
+      {/* MODAL หมวดหมู่ */}
+      {showCatModal&&(
+        <Overlay>
+          <div style={S.modalBox} className="modal-scroll">
+            <div style={{fontSize:17,fontWeight:700,marginBottom:18,color:"#f1f5f9"}}>{editCat?"✏️ แก้ไขหมวดหมู่":"🏷️ เพิ่มหมวดหมู่ใหม่"}</div>
+            <label style={S.label}>ประเภท</label>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              {[["income","💹 รายรับ"],["expense","💸 รายจ่าย"]].map(([v,lbl])=>(
+                <button key={v} onClick={()=>setCatForm(f=>({...f,type:v}))} style={{
+                  flex:1,padding:"9px 0",borderRadius:10,border:"2px solid",
+                  borderColor:catForm.type===v?(v==="income"?INCOME_COLOR:EXPENSE_COLOR):"#334155",
+                  background:catForm.type===v?(v==="income"?"#064e3b":"#4c0519"):"transparent",
+                  color:catForm.type===v?"#fff":"#94a3b8",fontWeight:700,cursor:"pointer",fontSize:13
+                }}>{lbl}</button>
+              ))}
+            </div>
+            <label style={S.label}>ชื่อหมวดหมู่</label>
+            <input placeholder="เช่น ค่าอาหาร, เงินเดือน..." value={catForm.name} onChange={e=>setCatForm(f=>({...f,name:e.target.value}))} style={{...S.input,marginBottom:12}} />
+            <label style={S.label}>สี</label>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
+              {COLOR_PALETTE.map(color=>(
+                <button key={color} onClick={()=>setCatForm(f=>({...f,color}))} style={{
+                  width:26,height:26,borderRadius:"50%",background:color,border:"none",cursor:"pointer",
+                  outline:catForm.color===color?"3px solid #fff":"none",outlineOffset:2,
+                  transform:catForm.color===color?"scale(1.2)":"scale(1)",transition:"all .15s"
+                }} />
+              ))}
+            </div>
+            {catForm.name.trim()&&(
+              <div style={{display:"flex",alignItems:"center",gap:8,background:"#0f172a",padding:"8px 12px",borderRadius:9,marginBottom:14}}>
+                <div style={{width:22,height:22,borderRadius:"50%",background:catForm.color}} />
+                <span style={{fontWeight:700,color:"#f1f5f9",fontSize:13}}>{catForm.name}</span>
+                <span style={{fontSize:10,color:catForm.type==="income"?INCOME_COLOR:"#fb923c",marginLeft:"auto"}}>
+                  {catForm.type==="income"?"รายรับ":"รายจ่าย"}
+                </span>
+              </div>
+            )}
+            {!editCat&&catForm.name.trim()&&categories.some(c=>c.name===catForm.name.trim())&&(
+              <div style={{color:"#f43f5e",fontSize:12,marginBottom:10}}>⚠️ ชื่อนี้มีอยู่แล้ว</div>
+            )}
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setShowCatModal(false)} style={S.cancelBtn}>ยกเลิก</button>
+              <button onClick={saveCat} style={S.primaryBtn}>{editCat?"บันทึกการแก้ไข":"เพิ่มหมวดหมู่"}</button>
+            </div>
+          </div>
+        </Overlay>
+      )}
+
+      {/* MODAL ยืนยันลบรายการ */}
+      {deleteConfirm&&(
+        <Overlay>
+          <div style={{...S.modalBox,width:"min(360px,95vw)"}}>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:10,color:"#f43f5e"}}>🗑️ ยืนยันการลบ</div>
+            <div style={{color:"#94a3b8",marginBottom:18,fontSize:13}}>
+              ลบรายการ <strong style={{color:"#f1f5f9"}}>{deleteConfirm.desc||deleteConfirm.category}</strong> มูลค่า <strong style={{color:EXPENSE_COLOR}}>{fmt(deleteConfirm.amount)}</strong>?
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setDeleteConfirm(null)} style={S.cancelBtn}>ยกเลิก</button>
+              <button onClick={()=>deleteItem(deleteConfirm.id)} style={{...S.primaryBtn,background:"#f43f5e"}}>ลบเลย</button>
+            </div>
+          </div>
+        </Overlay>
+      )}
+
+      {/* MODAL ยืนยันลบหมวดหมู่ */}
+      {deleteCatConfirm&&(
+        <Overlay>
+          <div style={{...S.modalBox,width:"min(360px,95vw)"}}>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:12,color:"#f43f5e"}}>🗑️ ลบหมวดหมู่</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,background:"#0f172a",padding:"8px 12px",borderRadius:9,marginBottom:12}}>
+              <div style={{width:22,height:22,borderRadius:"50%",background:deleteCatConfirm.cat.color}} />
+              <span style={{fontWeight:700,color:"#f1f5f9"}}>{deleteCatConfirm.cat.name}</span>
+            </div>
+            {deleteCatConfirm.usageCount>0&&(
+              <div style={{background:"#4c0519",border:"1px solid #f43f5e55",borderRadius:9,padding:"9px 12px",marginBottom:14,fontSize:12,color:"#fda4af"}}>
+                ⚠️ ใช้ใน <strong>{deleteCatConfirm.usageCount} รายการ</strong> อยู่
+              </div>
+            )}
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>setDeleteCatConfirm(null)} style={S.cancelBtn}>ยกเลิก</button>
+              <button onClick={deleteCat} style={{...S.primaryBtn,background:"#f43f5e"}}>ลบหมวดหมู่</button>
+            </div>
+          </div>
+        </Overlay>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
