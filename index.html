@@ -144,7 +144,9 @@ function App() {
   const [viewYear,     setViewYear]     = useState(new Date().getFullYear());
   const [viewMonth,    setViewMonth]    = useState(new Date().getMonth());
   const [loading,      setLoading]      = useState(true);
+  const [saveStatus,   setSaveStatus]   = useState("idle"); // "idle"|"saving"|"saved"|"error"
   const initialized = useRef(false);
+  const saveTimer   = useRef(null);
 
   // ── โหลดข้อมูลจาก Realtime Database ตอนเปิดแอป ────────────────────────────
   useEffect(() => {
@@ -156,7 +158,8 @@ function App() {
       }
       initialized.current = true;
       setLoading(false);
-    }).catch(() => {
+    }).catch(err => {
+      console.error("โหลดข้อมูลล้มเหลว:", err);
       initialized.current = true;
       setLoading(false);
     });
@@ -165,7 +168,19 @@ function App() {
   // ── บันทึกข้อมูลลง Realtime Database อัตโนมัติทุกครั้งที่มีการเปลี่ยนแปลง ──
   useEffect(() => {
     if (!initialized.current) return;
-    dataRef.set({ transactions, categories });
+    setSaveStatus("saving");
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      dataRef.set({ transactions, categories })
+        .then(() => {
+          setSaveStatus("saved");
+          setTimeout(() => setSaveStatus("idle"), 2000);
+        })
+        .catch(err => {
+          console.error("บันทึกล้มเหลว:", err);
+          setSaveStatus("error");
+        });
+    }, 500);
   }, [transactions, categories]);
 
   // tx modal
@@ -312,6 +327,9 @@ function App() {
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
+          {saveStatus==="saving" && <span style={{fontSize:11,color:"#fbbf24",background:"rgba(251,191,36,.15)",padding:"3px 8px",borderRadius:6}}>💾 กำลังบันทึก...</span>}
+          {saveStatus==="saved"  && <span style={{fontSize:11,color:"#10b981",background:"rgba(16,185,129,.15)",padding:"3px 8px",borderRadius:6}}>✅ บันทึกแล้ว</span>}
+          {saveStatus==="error"  && <span style={{fontSize:11,color:"#f43f5e",background:"rgba(244,63,94,.15)",padding:"3px 8px",borderRadius:6}}>❌ บันทึกล้มเหลว</span>}
           <button onClick={()=>setViewYear(y=>y-1)} style={S.navBtn}>◀</button>
           <span style={{fontSize:16,fontWeight:700,minWidth:50,textAlign:"center"}}>{viewYear}</span>
           <button onClick={()=>setViewYear(y=>y+1)} style={S.navBtn}>▶</button>
