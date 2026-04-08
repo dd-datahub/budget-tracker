@@ -9,19 +9,20 @@
   <script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
   <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDH8epGYAqBFATFo_K_VydE7cTVIIqM6YY",
       authDomain: "budget-tracker-app-b6233.firebaseapp.com",
+      databaseURL: "https://budget-tracker-app-b6233-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "budget-tracker-app-b6233",
       storageBucket: "budget-tracker-app-b6233.firebasestorage.app",
       messagingSenderId: "604852078953",
       appId: "1:604852078953:web:a6c255cd84b681419495f8"
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const dataRef = db.collection("budget").doc("main");
+    const db = firebase.database();
+    const dataRef = db.ref("budget/main");
   </script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
@@ -145,11 +146,11 @@ function App() {
   const [loading,      setLoading]      = useState(true);
   const initialized = useRef(false);
 
-  // ── โหลดข้อมูลจาก Firestore ตอนเปิดแอป ────────────────────────────────────
+  // ── โหลดข้อมูลจาก Realtime Database ตอนเปิดแอป ────────────────────────────
   useEffect(() => {
-    dataRef.get().then(doc => {
-      if (doc.exists()) {
-        const data = doc.data();
+    dataRef.once("value").then(snapshot => {
+      const data = snapshot.val();
+      if (data) {
         if (data.transactions?.length) setTransactions(data.transactions);
         if (data.categories?.length)   setCategories(data.categories);
       }
@@ -161,7 +162,7 @@ function App() {
     });
   }, []);
 
-  // ── บันทึกข้อมูลลง Firestore อัตโนมัติทุกครั้งที่มีการเปลี่ยนแปลง ──────────
+  // ── บันทึกข้อมูลลง Realtime Database อัตโนมัติทุกครั้งที่มีการเปลี่ยนแปลง ──
   useEffect(() => {
     if (!initialized.current) return;
     dataRef.set({ transactions, categories });
