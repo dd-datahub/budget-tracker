@@ -25,7 +25,6 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    const dataRef = db.ref("budget/main");
   </script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
@@ -222,21 +221,43 @@ function TxCard({t,colorMap,onEdit,onDelete}) {
   );
 }
 
+// ── Profile config ──────────────────────────────────────────────────────────
+const PROFILES = {
+  personal: { label:"ส่วนตัว", icon:"👤", color:"#7c3aed", grad:"linear-gradient(135deg,#1e40af,#7c3aed)", path:"budget/personal" },
+  company:  { label:"บริษัท",  icon:"🏢", color:"#0ea5e9", grad:"linear-gradient(135deg,#0369a1,#0ea5e9)", path:"budget/company"  },
+};
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
+  const [profile,      setProfile]      = useState("personal");
   const [transactions, setTransactions] = useState([]);
   const [categories,   setCategories]   = useState(INIT_CATS);
   const [activeTab,    setActiveTab]    = useState("dashboard");
   const [viewYear,     setViewYear]     = useState(new Date().getFullYear());
   const [viewMonth,    setViewMonth]    = useState(new Date().getMonth());
   const [loading,      setLoading]      = useState(true);
-  const [saveStatus,   setSaveStatus]   = useState("idle"); // "idle"|"saving"|"saved"|"error"
+  const [saveStatus,   setSaveStatus]   = useState("idle");
   const initialized = useRef(false);
   const saveTimer   = useRef(null);
 
-  // ── โหลดข้อมูลจาก Realtime Database ตอนเปิดแอป ────────────────────────────
+  const prof = PROFILES[profile];
+
+  // ── สลับโปรไฟล์ ───────────────────────────────────────────────────────────
+  function switchProfile(p) {
+    if (p === profile) return;
+    initialized.current = false;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setLoading(true);
+    setTransactions([]);
+    setCategories(INIT_CATS);
+    setSaveStatus("idle");
+    setProfile(p);
+  }
+
+  // ── โหลดข้อมูลจาก Realtime Database เมื่อเปิดแอปหรือสลับโปรไฟล์ ─────────
   useEffect(() => {
-    dataRef.once("value").then(snapshot => {
+    const ref = db.ref(PROFILES[profile].path);
+    ref.once("value").then(snapshot => {
       const data = snapshot.val();
       if (data) {
         if (data.transactions?.length) setTransactions(data.transactions);
@@ -249,15 +270,16 @@ function App() {
       initialized.current = true;
       setLoading(false);
     });
-  }, []);
+  }, [profile]);
 
-  // ── บันทึกข้อมูลลง Realtime Database อัตโนมัติทุกครั้งที่มีการเปลี่ยนแปลง ──
+  // ── บันทึกข้อมูลอัตโนมัติ ────────────────────────────────────────────────
   useEffect(() => {
     if (!initialized.current) return;
     setSaveStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    const ref = db.ref(PROFILES[profile].path);
     saveTimer.current = setTimeout(() => {
-      dataRef.set({ transactions, categories })
+      ref.set({ transactions, categories })
         .then(() => {
           setSaveStatus("saved");
           setTimeout(() => setSaveStatus("idle"), 2000);
@@ -397,11 +419,11 @@ function App() {
 
   // ── Loading screen ─────────────────────────────────────────────────────────
   if (loading) return (
-    <div style={{background:"#0f172a",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
-      <div style={{fontSize:48}}>💰</div>
-      <div style={{color:"#6366f1",fontSize:16,fontWeight:600}}>กำลังโหลดข้อมูล...</div>
-      <div style={{width:40,height:40,border:"4px solid #334155",borderTop:"4px solid #6366f1",borderRadius:"50%",animation:"spin 1s linear infinite"}}></div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    <div style={{background:"#0f172a",minHeight:"100dvh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14}}>
+      <div style={{fontSize:44}}>💰</div>
+      <div style={{fontSize:15,fontWeight:700,color:"#f1f5f9"}}>{prof.icon} {prof.label}</div>
+      <div style={{color:prof.color,fontSize:14,fontWeight:600}}>กำลังโหลดข้อมูล...</div>
+      <div style={{width:38,height:38,border:`4px solid #334155`,borderTop:`4px solid ${prof.color}`,borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
     </div>
   );
 
@@ -420,23 +442,28 @@ function App() {
       )}
 
       {/* Header */}
-      <div className="app-header">
-        <div style={{display:"flex",alignItems:"center",gap:9}}>
-          <span style={{fontSize:22}}>💰</span>
-          <div>
-            <div style={{fontSize:15,fontWeight:700,lineHeight:1.2}}>Budget Tracker</div>
-            <div style={{fontSize:10,opacity:.7}}>บันทึกรายรับ-รายจ่าย</div>
-          </div>
+      <div className="app-header" style={{background:prof.grad}}>
+        {/* Profile Switcher */}
+        <div style={{display:"flex",background:"rgba(0,0,0,.25)",borderRadius:12,padding:3,gap:2}}>
+          {Object.entries(PROFILES).map(([k,p])=>(
+            <button key={k} onClick={()=>switchProfile(k)} style={{
+              display:"flex",alignItems:"center",gap:5,padding:"7px 11px",borderRadius:9,border:"none",cursor:"pointer",
+              background:profile===k?"rgba(255,255,255,.22)":"transparent",
+              color:profile===k?"#fff":"rgba(255,255,255,.55)",fontWeight:700,fontSize:12,transition:"all .2s",
+              boxShadow:profile===k?"0 2px 8px rgba(0,0,0,.25)":"none"
+            }}>
+              <span style={{fontSize:15}}>{p.icon}</span>
+              <span>{p.label}</span>
+            </button>
+          ))}
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          {saveStatus==="saving" && <span style={{fontSize:10,color:"#fbbf24",background:"rgba(251,191,36,.15)",padding:"3px 7px",borderRadius:6}}>💾 บันทึก...</span>}
-          {saveStatus==="saved"  && <span style={{fontSize:10,color:"#10b981",background:"rgba(16,185,129,.15)",padding:"3px 7px",borderRadius:6}}>✅ บันทึกแล้ว</span>}
+
+        <div style={{display:"flex",alignItems:"center",gap:5}}>
+          {saveStatus==="saving" && <span style={{fontSize:10,color:"#fbbf24",background:"rgba(251,191,36,.15)",padding:"3px 7px",borderRadius:6,whiteSpace:"nowrap"}}>💾 บันทึก...</span>}
+          {saveStatus==="saved"  && <span style={{fontSize:10,color:"#10b981",background:"rgba(16,185,129,.15)",padding:"3px 7px",borderRadius:6,whiteSpace:"nowrap"}}>✅ บันทึกแล้ว</span>}
           <button onClick={()=>setViewYear(y=>y-1)} style={S.navBtn}>◀</button>
           <span style={{fontSize:15,fontWeight:700,minWidth:44,textAlign:"center"}}>{viewYear}</span>
           <button onClick={()=>setViewYear(y=>y+1)} style={S.navBtn}>▶</button>
-          <button onClick={openAdd} style={{marginLeft:4,background:"#10b981",border:"none",color:"#fff",padding:"8px 14px",borderRadius:10,fontWeight:700,cursor:"pointer",fontSize:13,display:"none"}} className="desktop-add">
-            + เพิ่ม
-          </button>
         </div>
       </div>
 
@@ -444,12 +471,17 @@ function App() {
       <div className="top-tab-bar" style={{display:"none",background:"#1e293b",padding:"6px 14px",gap:4,borderBottom:"1px solid #334155"}}>
         {tabs.map(({k,icon,label})=>(
           <button key={k} onClick={()=>setActiveTab(k)} style={{
-            background:activeTab===k?"#6366f1":"transparent",
+            background:activeTab===k?prof.color:"transparent",
             border:"none",color:activeTab===k?"#fff":"#94a3b8",
             padding:"7px 14px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13,
             whiteSpace:"nowrap",transition:"all .2s"
           }}>{icon} {label}</button>
         ))}
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center"}}>
+          <button onClick={openAdd} style={{background:"#10b981",border:"none",color:"#fff",padding:"7px 14px",borderRadius:10,fontWeight:700,cursor:"pointer",fontSize:13}}>
+            + เพิ่ม
+          </button>
+        </div>
       </div>
 
       {/* FAB (mobile only) */}
@@ -828,10 +860,11 @@ function App() {
       {/* Bottom Navigation Bar (mobile only) */}
       <nav className="bottom-nav">
         {tabs.map(({k,icon,label})=>(
-          <button key={k} className={"bnav-btn"+(activeTab===k?" active":"")} onClick={()=>setActiveTab(k)}>
+          <button key={k} className={"bnav-btn"+(activeTab===k?" active":"")} onClick={()=>setActiveTab(k)}
+            style={activeTab===k?{"--active-color":prof.color}:{}}>
             <span className="bnav-icon">{icon}</span>
-            <span className="bnav-label">{label}</span>
-            <span className="bnav-dot"/>
+            <span className="bnav-label" style={activeTab===k?{color:prof.color}:{}}>{label}</span>
+            <span className="bnav-dot" style={{background:prof.color}}/>
           </button>
         ))}
       </nav>
