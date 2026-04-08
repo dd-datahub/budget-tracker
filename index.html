@@ -138,7 +138,7 @@ function TxRow({t,colorMap,onEdit,onDelete}) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
-  const [transactions, setTransactions] = useState(SAMPLE);
+  const [transactions, setTransactions] = useState([]);
   const [categories,   setCategories]   = useState(INIT_CATS);
   const [activeTab,    setActiveTab]    = useState("dashboard");
   const [viewYear,     setViewYear]     = useState(new Date().getFullYear());
@@ -316,6 +316,17 @@ function App() {
 
   return (
     <div style={{fontFamily:"'Sarabun','Segoe UI',sans-serif",background:"#0f172a",minHeight:"100vh",color:"#e2e8f0"}}>
+
+      {/* Firebase Error Banner */}
+      {saveStatus==="error" && (
+        <div style={{background:"#7f1d1d",borderBottom:"2px solid #f43f5e",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:18}}>❌</span>
+          <div>
+            <div style={{fontWeight:700,fontSize:13,color:"#fca5a5"}}>บันทึกข้อมูลไม่สำเร็จ — ข้อมูลอาจหายหลัง Refresh</div>
+            <div style={{fontSize:11,color:"#fca5a5",opacity:.8}}>แก้ไข: Firebase Console → Realtime Database → Rules → เปลี่ยนเป็น ".read":true, ".write":true แล้วกด Publish</div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{background:"linear-gradient(135deg,#1e40af,#7c3aed)",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}>
