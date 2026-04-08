@@ -2,7 +2,10 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0f172a" />
   <title>💰 Budget Tracker</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -27,11 +30,77 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Sarabun', 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
-    input, select, button { font-family: inherit; }
+    html, body { height: 100%; }
+    body { font-family: 'Sarabun', 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100dvh; overscroll-behavior: none; }
+    input, select, button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
-    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #1e293b; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    .modal-scroll { max-height: 90vh; overflow-y: auto; }
+    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #1e293b; } ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    /* ── Bottom Nav ── */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #1e293b; border-top: 1px solid #334155; display: flex; z-index: 200; padding-bottom: env(safe-area-inset-bottom,0px); }
+    .bnav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 8px 2px 6px; border: none; background: transparent; cursor: pointer; gap: 3px; min-height: 58px; transition: all .15s; }
+    .bnav-icon { font-size: 20px; line-height: 1; }
+    .bnav-label { font-size: 10px; font-weight: 600; color: #64748b; }
+    .bnav-btn.active .bnav-label { color: #6366f1; }
+    .bnav-dot { width: 4px; height: 4px; border-radius: 50%; background: #6366f1; margin-top: 2px; opacity: 0; }
+    .bnav-btn.active .bnav-dot { opacity: 1; }
+
+    /* ── FAB ── */
+    .fab { position: fixed; right: 18px; z-index: 199; width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(135deg,#10b981,#059669); border: none; color: #fff; font-size: 28px; cursor: pointer; box-shadow: 0 6px 24px rgba(16,185,129,.45); display: flex; align-items: center; justify-content: center; transition: transform .15s; }
+    .fab:active { transform: scale(.92); }
+    .fab { bottom: calc(68px + env(safe-area-inset-bottom,0px)); }
+
+    /* ── Main Content ── */
+    .main-content { padding: 12px 12px 0; max-width: 1100px; margin: 0 auto; padding-bottom: calc(76px + env(safe-area-inset-bottom,0px)); }
+
+    /* ── Header ── */
+    .app-header { background: linear-gradient(135deg,#1e40af,#7c3aed); padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top,0px)); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 20px rgba(0,0,0,.4); position: sticky; top: 0; z-index: 100; }
+
+    /* ── KPI Grid ── */
+    .kpi-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+    .kpi-card { background: #1e293b; border-radius: 12px; padding: 12px; border: 1px solid #334155; }
+
+    /* ── Tx Cards (mobile) ── */
+    .tx-card-list { display: flex; flex-direction: column; gap: 8px; }
+    .tx-table-wrap { display: none; }
+
+    /* ── Month pills ── */
+    .month-pills { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .month-pills::-webkit-scrollbar { display: none; }
+
+    /* ── Modal Overlay ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: flex-end; z-index: 1000; }
+    .modal-sheet { background: #1e293b; border-radius: 20px 20px 0 0; padding: 20px 16px; padding-bottom: calc(20px + env(safe-area-inset-bottom,0px)); width: 100%; max-height: 92dvh; overflow-y: auto; border-top: 1px solid #334155; }
+    .modal-handle { width: 40px; height: 4px; background: #475569; border-radius: 2px; margin: 0 auto 16px; }
+    .modal-center { background: #1e293b; border-radius: 16px; padding: 22px 18px; width: min(420px,95vw); max-height: 88dvh; overflow-y: auto; border: 1px solid #334155; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+    .modal-overlay-center { align-items: center; justify-content: center; }
+
+    /* ── Inputs ── */
+    .inp { background: #0f172a; border: 1.5px solid #334155; border-radius: 10px; padding: 12px 14px; color: #f1f5f9; font-size: 15px; outline: none; width: 100%; }
+    .inp:focus { border-color: #6366f1; }
+    .btn-row { display: flex; gap: 10px; margin-top: 18px; }
+    .btn-cancel { flex: 1; padding: 13px 0; border-radius: 12px; border: 1.5px solid #334155; background: transparent; color: #94a3b8; cursor: pointer; font-weight: 600; font-size: 15px; }
+    .btn-primary { flex: 2; padding: 13px 0; border-radius: 12px; border: none; background: #6366f1; color: #fff; cursor: pointer; font-weight: 700; font-size: 15px; }
+    .btn-danger { flex: 2; padding: 13px 0; border-radius: 12px; border: none; background: #f43f5e; color: #fff; cursor: pointer; font-weight: 700; font-size: 15px; }
+
+    /* ── Desktop overrides ── */
+    @media (min-width: 700px) {
+      .bottom-nav { display: none; }
+      .fab { display: none; }
+      .top-tab-bar { display: flex !important; }
+      .main-content { padding: 16px; padding-bottom: 16px; }
+      .tx-card-list { display: none; }
+      .tx-table-wrap { display: block; }
+      .kpi-grid-3 { gap: 14px; }
+      .kpi-card { padding: 18px; }
+      .modal-overlay { align-items: center; justify-content: center; }
+      .modal-sheet { border-radius: 16px; max-height: 88vh; }
+    }
+
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-sheet { animation: slideUp .25s ease; }
+    @media (min-width: 700px) { .modal-sheet { animation: none; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -93,45 +162,62 @@ const SAMPLE = [
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S = {
-  card:      {background:"#1e293b",borderRadius:14,padding:"18px 20px",border:"1px solid #334155"},
-  cardTitle: {fontSize:15,fontWeight:700,color:"#f1f5f9",marginBottom:16},
-  input:     {background:"#0f172a",border:"1px solid #334155",borderRadius:8,padding:"9px 12px",color:"#f1f5f9",fontSize:14,outline:"none",width:"100%",boxSizing:"border-box"},
+  card:      {background:"#1e293b",borderRadius:14,padding:"14px 16px",border:"1px solid #334155"},
+  cardTitle: {fontSize:14,fontWeight:700,color:"#f1f5f9",marginBottom:12},
   label:     {display:"block",color:"#94a3b8",fontSize:12,fontWeight:600,marginBottom:6},
-  navBtn:    {background:"rgba(255,255,255,.15)",border:"none",color:"#fff",width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:14},
-  cancelBtn: {flex:1,padding:"10px 0",borderRadius:10,border:"1px solid #334155",background:"transparent",color:"#94a3b8",cursor:"pointer",fontWeight:600,fontSize:14},
-  primaryBtn:{flex:2,padding:"10px 0",borderRadius:10,border:"none",background:"#6366f1",color:"#fff",cursor:"pointer",fontWeight:700,fontSize:15},
-  modalBox:  {background:"#1e293b",borderRadius:16,padding:28,width:"min(440px,95vw)",boxShadow:"0 20px 60px rgba(0,0,0,.5)",border:"1px solid #334155"},
+  navBtn:    {background:"rgba(255,255,255,.18)",border:"none",color:"#fff",width:34,height:34,borderRadius:9,cursor:"pointer",fontSize:15},
+  typeBtn: (active,color,bg) => ({
+    flex:1, padding:"12px 0", borderRadius:12, border:"2px solid",
+    borderColor: active ? color : "#334155",
+    background: active ? bg : "transparent",
+    color: active ? "#fff" : "#94a3b8", fontWeight:700, cursor:"pointer", fontSize:14,
+    transition:"all .15s"
+  }),
 };
-const iconBtn = bg => ({background:bg+"22",border:"none",borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:14});
+const iconBtn = bg => ({background:bg+"22",border:"none",borderRadius:8,padding:"7px 9px",cursor:"pointer",fontSize:15});
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
-function Overlay({children}) {
-  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:16}}>{children}</div>;
-}
-function KpiCard({icon,label,value,color}) {
+function ModalSheet({children, onClose, center=false}) {
   return (
-    <div style={{...S.card,borderTop:`3px solid ${color}`}}>
-      <div style={{fontSize:22,marginBottom:6}}>{icon}</div>
-      <div style={{color:"#94a3b8",fontSize:12,marginBottom:4}}>{label}</div>
-      <div style={{color,fontSize:20,fontWeight:800}}>{value}</div>
+    <div className={"modal-overlay"+(center?" modal-overlay-center":"")} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div className={center?"modal-center":"modal-sheet"}>
+        {!center && <div className="modal-handle"/>}
+        {children}
+      </div>
     </div>
   );
 }
-function TxRow({t,colorMap,onEdit,onDelete}) {
+function KpiCard({icon,label,value,color}) {
   return (
-    <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",background:"#0f172a",borderRadius:10}}>
-      <div style={{width:34,height:34,borderRadius:"50%",background:(colorMap[t.category]||"#64748b")+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,flexShrink:0}}>
+    <div className="kpi-card" style={{borderTop:`3px solid ${color}`}}>
+      <div style={{fontSize:18,marginBottom:4}}>{icon}</div>
+      <div style={{color:"#94a3b8",fontSize:11,marginBottom:3,lineHeight:1.3}}>{label}</div>
+      <div style={{color,fontSize:15,fontWeight:800,letterSpacing:-.5}}>{value}</div>
+    </div>
+  );
+}
+function TxCard({t,colorMap,onEdit,onDelete}) {
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#1e293b",borderRadius:12,border:"1px solid #334155"}}>
+      <div style={{width:40,height:40,borderRadius:12,background:(colorMap[t.category]||"#64748b")+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
         {t.type==="income"?"💹":"💸"}
       </div>
       <div style={{flex:1,minWidth:0}}>
-        <div style={{fontWeight:600,fontSize:13,color:"#f1f5f9",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.desc||t.category}</div>
-        <div style={{fontSize:11,color:"#64748b"}}>{t.category} • {formatDate(t.date)}</div>
+        <div style={{fontWeight:700,fontSize:14,color:"#f1f5f9",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.desc||t.category}</div>
+        <div style={{fontSize:12,color:"#64748b",marginTop:2}}>
+          <span style={{display:"inline-block",width:7,height:7,borderRadius:"50%",background:colorMap[t.category]||"#64748b",marginRight:4,verticalAlign:"middle"}}/>
+          {t.category} · {formatDate(t.date)}
+        </div>
       </div>
-      <div style={{fontWeight:700,fontSize:14,color:t.type==="income"?INCOME_COLOR:EXPENSE_COLOR,flexShrink:0}}>
-        {t.type==="expense"?"-":"+"}{fmt(t.amount)}
+      <div style={{textAlign:"right",flexShrink:0}}>
+        <div style={{fontWeight:800,fontSize:15,color:t.type==="income"?INCOME_COLOR:EXPENSE_COLOR}}>
+          {t.type==="expense"?"-":"+"}{fmt(t.amount)}
+        </div>
+        <div style={{display:"flex",gap:4,marginTop:4,justifyContent:"flex-end"}}>
+          <button onClick={()=>onEdit(t)} style={iconBtn("#6366f1")}>✏️</button>
+          <button onClick={()=>onDelete(t)} style={iconBtn("#f43f5e")}>🗑️</button>
+        </div>
       </div>
-      <button onClick={()=>onEdit(t)} style={iconBtn("#6366f1")}>✏️</button>
-      <button onClick={()=>onDelete(t)} style={{...iconBtn("#f43f5e"),marginLeft:2}}>🗑️</button>
     </div>
   );
 }
@@ -301,8 +387,13 @@ function App() {
   }
 
   const formCats = form.type==="income"?incomeCats:expenseCats;
-  const tabs = [["dashboard","📊"],["transactions","📋"],["monthly","📅"],["yearly","📆"],["categories","🏷️"]];
-  const tabLabels = {dashboard:"Dashboard",transactions:"รายการ",monthly:"รายเดือน",yearly:"รายปี",categories:"หมวดหมู่"};
+  const tabs = [
+    {k:"dashboard",  icon:"📊", label:"หน้าหลัก"},
+    {k:"transactions",icon:"📋",label:"รายการ"},
+    {k:"monthly",    icon:"📅", label:"รายเดือน"},
+    {k:"yearly",     icon:"📆", label:"รายปี"},
+    {k:"categories", icon:"🏷️", label:"หมวด"},
+  ];
 
   // ── Loading screen ─────────────────────────────────────────────────────────
   if (loading) return (
@@ -315,105 +406,107 @@ function App() {
   );
 
   return (
-    <div style={{fontFamily:"'Sarabun','Segoe UI',sans-serif",background:"#0f172a",minHeight:"100vh",color:"#e2e8f0"}}>
+    <div style={{fontFamily:"'Sarabun','Segoe UI',sans-serif",background:"#0f172a",minHeight:"100dvh",color:"#e2e8f0"}}>
 
       {/* Firebase Error Banner */}
       {saveStatus==="error" && (
-        <div style={{background:"#7f1d1d",borderBottom:"2px solid #f43f5e",padding:"10px 16px",display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:18}}>❌</span>
+        <div style={{background:"#7f1d1d",borderBottom:"2px solid #f43f5e",padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:16}}>❌</span>
           <div>
-            <div style={{fontWeight:700,fontSize:13,color:"#fca5a5"}}>บันทึกข้อมูลไม่สำเร็จ — ข้อมูลอาจหายหลัง Refresh</div>
-            <div style={{fontSize:11,color:"#fca5a5",opacity:.8}}>แก้ไข: Firebase Console → Realtime Database → Rules → เปลี่ยนเป็น ".read":true, ".write":true แล้วกด Publish</div>
+            <div style={{fontWeight:700,fontSize:12,color:"#fca5a5"}}>บันทึกไม่สำเร็จ — แก้ Firebase Rules ก่อน</div>
+            <div style={{fontSize:10,color:"#fca5a5",opacity:.8}}>Realtime Database → Rules → ".read":true, ".write":true → Publish</div>
           </div>
         </div>
       )}
 
       {/* Header */}
-      <div style={{background:"linear-gradient(135deg,#1e40af,#7c3aed)",padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:24}}>💰</span>
+      <div className="app-header">
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          <span style={{fontSize:22}}>💰</span>
           <div>
-            <div style={{fontSize:16,fontWeight:700}}>Budget Tracker</div>
-            <div style={{fontSize:11,opacity:.75}}>บันทึกรายรับ-รายจ่าย</div>
+            <div style={{fontSize:15,fontWeight:700,lineHeight:1.2}}>Budget Tracker</div>
+            <div style={{fontSize:10,opacity:.7}}>บันทึกรายรับ-รายจ่าย</div>
           </div>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
-          {saveStatus==="saving" && <span style={{fontSize:11,color:"#fbbf24",background:"rgba(251,191,36,.15)",padding:"3px 8px",borderRadius:6}}>💾 กำลังบันทึก...</span>}
-          {saveStatus==="saved"  && <span style={{fontSize:11,color:"#10b981",background:"rgba(16,185,129,.15)",padding:"3px 8px",borderRadius:6}}>✅ บันทึกแล้ว</span>}
-          {saveStatus==="error"  && <span style={{fontSize:11,color:"#f43f5e",background:"rgba(244,63,94,.15)",padding:"3px 8px",borderRadius:6}}>❌ บันทึกล้มเหลว</span>}
+          {saveStatus==="saving" && <span style={{fontSize:10,color:"#fbbf24",background:"rgba(251,191,36,.15)",padding:"3px 7px",borderRadius:6}}>💾 บันทึก...</span>}
+          {saveStatus==="saved"  && <span style={{fontSize:10,color:"#10b981",background:"rgba(16,185,129,.15)",padding:"3px 7px",borderRadius:6}}>✅ บันทึกแล้ว</span>}
           <button onClick={()=>setViewYear(y=>y-1)} style={S.navBtn}>◀</button>
-          <span style={{fontSize:16,fontWeight:700,minWidth:50,textAlign:"center"}}>{viewYear}</span>
+          <span style={{fontSize:15,fontWeight:700,minWidth:44,textAlign:"center"}}>{viewYear}</span>
           <button onClick={()=>setViewYear(y=>y+1)} style={S.navBtn}>▶</button>
-          <button onClick={openAdd} style={{marginLeft:8,background:"#10b981",border:"none",color:"#fff",padding:"7px 14px",borderRadius:10,fontWeight:700,cursor:"pointer",fontSize:13}}>
+          <button onClick={openAdd} style={{marginLeft:4,background:"#10b981",border:"none",color:"#fff",padding:"8px 14px",borderRadius:10,fontWeight:700,cursor:"pointer",fontSize:13,display:"none"}} className="desktop-add">
             + เพิ่ม
           </button>
         </div>
       </div>
 
-      {/* Tab Bar */}
-      <div style={{background:"#1e293b",display:"flex",padding:"6px 12px",gap:4,borderBottom:"1px solid #334155",overflowX:"auto"}}>
-        {tabs.map(([k,icon])=>(
+      {/* Top Tab Bar (desktop only) */}
+      <div className="top-tab-bar" style={{display:"none",background:"#1e293b",padding:"6px 14px",gap:4,borderBottom:"1px solid #334155"}}>
+        {tabs.map(({k,icon,label})=>(
           <button key={k} onClick={()=>setActiveTab(k)} style={{
             background:activeTab===k?"#6366f1":"transparent",
             border:"none",color:activeTab===k?"#fff":"#94a3b8",
-            padding:"7px 12px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:12,
+            padding:"7px 14px",borderRadius:8,cursor:"pointer",fontWeight:600,fontSize:13,
             whiteSpace:"nowrap",transition:"all .2s"
-          }}>{icon} {tabLabels[k]}</button>
+          }}>{icon} {label}</button>
         ))}
       </div>
 
+      {/* FAB (mobile only) */}
+      <button className="fab" onClick={openAdd}>＋</button>
+
       {/* Content */}
-      <div style={{padding:"16px",maxWidth:1100,margin:"0 auto"}}>
+      <div className="main-content">
 
         {/* DASHBOARD */}
         {activeTab==="dashboard" && (
           <div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+            <div className="kpi-grid-3">
               <KpiCard icon="💹" label="รายรับทั้งปี"  value={fmt(dashStats.totalIncome)}  color={INCOME_COLOR} />
               <KpiCard icon="💸" label="รายจ่ายทั้งปี" value={fmt(dashStats.totalExpense)} color={EXPENSE_COLOR} />
               <KpiCard icon="🏦" label="คงเหลือ"       value={fmt(dashStats.balance)}      color={dashStats.balance>=0?BALANCE_COLOR:"#f43f5e"} />
             </div>
 
-            <div style={{...S.card,marginBottom:16}}>
+            <div style={{...S.card,marginBottom:12}}>
               <div style={S.cardTitle}>รายรับ-รายจ่ายรายเดือน {viewYear}</div>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={monthSummary} margin={{top:5,right:10,bottom:0,left:0}}>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={monthSummary} margin={{top:4,right:4,bottom:0,left:-16}}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                  <XAxis dataKey="month" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:11}} />
-                  <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:10}} tickFormatter={v=>(v/1000)+"k"} />
-                  <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8}} />
-                  <Legend wrapperStyle={{color:"#94a3b8",fontSize:12}} />
+                  <XAxis dataKey="month" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:10}} />
+                  <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:9}} tickFormatter={v=>(v/1000)+"k"} />
+                  <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8,fontSize:12}} />
+                  <Legend wrapperStyle={{color:"#94a3b8",fontSize:11}} />
                   <Bar dataKey="income"  name="รายรับ"  fill={INCOME_COLOR}  radius={[4,4,0,0]} />
                   <Bar dataKey="expense" name="รายจ่าย" fill={EXPENSE_COLOR} radius={[4,4,0,0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1.4fr",gap:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
               <div style={S.card}>
                 <div style={S.cardTitle}>สัดส่วนรายจ่าย</div>
                 {dashStats.pieData.length>0?(
-                  <ResponsiveContainer width="100%" height={180}>
+                  <ResponsiveContainer width="100%" height={160}>
                     <PieChart>
-                      <Pie data={dashStats.pieData} cx="50%" cy="50%" outerRadius={65} dataKey="value" nameKey="name"
-                        label={({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={10}>
+                      <Pie data={dashStats.pieData} cx="50%" cy="50%" outerRadius={58} dataKey="value" nameKey="name" labelLine={false} fontSize={9}>
                         {dashStats.pieData.map((e,i)=><Cell key={i} fill={colorMap[e.name]||"#6366f1"} />)}
                       </Pie>
-                      <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8}} />
+                      <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8,fontSize:11}} />
+                      <Legend wrapperStyle={{color:"#94a3b8",fontSize:10}} />
                     </PieChart>
                   </ResponsiveContainer>
-                ):<div style={{textAlign:"center",color:"#64748b",padding:30}}>ไม่มีข้อมูล</div>}
+                ):<div style={{textAlign:"center",color:"#64748b",padding:24,fontSize:13}}>ยังไม่มีข้อมูล</div>}
               </div>
               <div style={S.card}>
-                <div style={S.cardTitle}>ยอดคงเหลือสะสม</div>
-                <ResponsiveContainer width="100%" height={180}>
+                <div style={S.cardTitle}>ยอดสะสม</div>
+                <ResponsiveContainer width="100%" height={160}>
                   <LineChart data={monthSummary.map((m,i)=>({...m,cum:monthSummary.slice(0,i+1).reduce((s,x)=>s+x.balance,0)}))}
-                    margin={{top:5,right:10,bottom:0,left:0}}>
+                    margin={{top:4,right:4,bottom:0,left:-16}}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="month" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:11}} />
-                    <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:10}} tickFormatter={v=>(v/1000)+"k"} />
-                    <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8}} />
-                    <Line type="monotone" dataKey="cum" name="คงเหลือสะสม" stroke={BALANCE_COLOR} strokeWidth={2.5} dot={{fill:BALANCE_COLOR,r:3}} />
+                    <XAxis dataKey="month" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:9}} />
+                    <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:9}} tickFormatter={v=>(v/1000)+"k"} />
+                    <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8,fontSize:11}} />
+                    <Line type="monotone" dataKey="cum" stroke={BALANCE_COLOR} strokeWidth={2.5} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -424,25 +517,36 @@ function App() {
         {/* TRANSACTIONS */}
         {activeTab==="transactions" && (
           <div>
-            <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
               <input placeholder="🔍 ค้นหา..." value={searchText} onChange={e=>setSearchText(e.target.value)}
-                style={{...S.input,flex:1,minWidth:140}} />
-              <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{...S.input,width:"auto"}}>
+                className="inp" style={{flex:1}} />
+              <select value={filterType} onChange={e=>setFilterType(e.target.value)} className="inp" style={{width:"auto",paddingLeft:10,paddingRight:10}}>
                 <option value="all">ทั้งหมด</option>
                 <option value="income">รายรับ</option>
                 <option value="expense">รายจ่าย</option>
               </select>
-              <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{...S.input,width:"auto"}}>
-                <option value="all">ทุกหมวด</option>
+            </div>
+            <div style={{marginBottom:10}}>
+              <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} className="inp">
+                <option value="all">ทุกหมวดหมู่</option>
                 {categories.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
-            <div style={{...S.card,padding:0,overflow:"hidden"}}>
+
+            {/* Mobile cards */}
+            <div className="tx-card-list">
+              {filteredTx.length===0
+                ?<div style={{textAlign:"center",color:"#64748b",padding:40,fontSize:14}}>ไม่พบรายการ</div>
+                :filteredTx.map(t=><TxCard key={t.id} t={t} colorMap={colorMap} onEdit={openEdit} onDelete={setDeleteConfirm}/>)}
+            </div>
+
+            {/* Desktop table */}
+            <div className="tx-table-wrap" style={{...S.card,padding:0,overflow:"hidden"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead>
                   <tr style={{background:"#1e3a5f"}}>
                     {["วันที่","ประเภท","หมวดหมู่","รายละเอียด","จำนวน",""].map(h=>(
-                      <th key={h} style={{padding:"10px 12px",textAlign:h==="จำนวน"?"right":"left",color:"#94a3b8",fontWeight:600,fontSize:12,borderBottom:"1px solid #334155"}}>{h}</th>
+                      <th key={h} style={{padding:"10px 14px",textAlign:h==="จำนวน"?"right":"left",color:"#94a3b8",fontWeight:600,fontSize:12,borderBottom:"1px solid #334155"}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -452,63 +556,64 @@ function App() {
                     <tr key={t.id} style={{borderBottom:"1px solid #1e293b"}}
                       onMouseEnter={e=>e.currentTarget.style.background="#1e293b"}
                       onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      <td style={{padding:"9px 12px",fontSize:12,color:"#94a3b8"}}>{formatDate(t.date)}</td>
-                      <td style={{padding:"9px 12px"}}>
-                        <span style={{background:t.type==="income"?"#064e3b":"#4c0519",color:t.type==="income"?"#34d399":"#fb7185",padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:600}}>
+                      <td style={{padding:"9px 14px",fontSize:12,color:"#94a3b8"}}>{formatDate(t.date)}</td>
+                      <td style={{padding:"9px 14px"}}>
+                        <span style={{background:t.type==="income"?"#064e3b":"#4c0519",color:t.type==="income"?"#34d399":"#fb7185",padding:"2px 9px",borderRadius:20,fontSize:11,fontWeight:600}}>
                           {t.type==="income"?"รายรับ":"รายจ่าย"}
                         </span>
                       </td>
-                      <td style={{padding:"9px 12px",fontSize:12}}>
+                      <td style={{padding:"9px 14px",fontSize:12}}>
                         <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                          <span style={{width:7,height:7,borderRadius:"50%",background:colorMap[t.category]||"#64748b",flexShrink:0}}></span>
+                          <span style={{width:7,height:7,borderRadius:"50%",background:colorMap[t.category]||"#64748b"}}/>
                           {t.category}
                         </span>
                       </td>
-                      <td style={{padding:"9px 12px",fontSize:12,color:"#cbd5e1",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.desc||"—"}</td>
-                      <td style={{padding:"9px 12px",textAlign:"right",fontWeight:700,fontSize:13,color:t.type==="income"?INCOME_COLOR:EXPENSE_COLOR}}>
+                      <td style={{padding:"9px 14px",fontSize:12,color:"#cbd5e1",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.desc||"—"}</td>
+                      <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,fontSize:13,color:t.type==="income"?INCOME_COLOR:EXPENSE_COLOR}}>
                         {t.type==="expense"?"-":"+"}{fmt(t.amount)}
                       </td>
-                      <td style={{padding:"9px 12px",textAlign:"right",whiteSpace:"nowrap"}}>
+                      <td style={{padding:"9px 14px",textAlign:"right",whiteSpace:"nowrap"}}>
                         <button onClick={()=>openEdit(t)} style={iconBtn("#6366f1")}>✏️</button>
-                        <button onClick={()=>setDeleteConfirm(t)} style={{...iconBtn("#f43f5e"),marginLeft:3}}>🗑️</button>
+                        <button onClick={()=>setDeleteConfirm(t)} style={{...iconBtn("#f43f5e"),marginLeft:4}}>🗑️</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div style={{textAlign:"right",marginTop:6,color:"#64748b",fontSize:11}}>{filteredTx.length} รายการ</div>
+            <div style={{textAlign:"right",marginTop:8,color:"#64748b",fontSize:11}}>{filteredTx.length} รายการ</div>
           </div>
         )}
 
         {/* MONTHLY */}
         {activeTab==="monthly" && (
           <div>
-            <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+            <div className="month-pills">
               {MONTHS.map((m,i)=>(
                 <button key={i} onClick={()=>setViewMonth(i)} style={{
-                  padding:"6px 11px",borderRadius:9,border:"none",cursor:"pointer",fontWeight:600,fontSize:12,
+                  padding:"8px 14px",borderRadius:20,border:"none",cursor:"pointer",fontWeight:700,fontSize:13,
                   background:viewMonth===i?"#6366f1":"#1e293b",color:viewMonth===i?"#fff":"#94a3b8",
-                  position:"relative",transition:"all .2s"
+                  position:"relative",flexShrink:0,transition:"all .2s",
+                  boxShadow:viewMonth===i?"0 2px 10px rgba(99,102,241,.4)":"none"
                 }}>
                   {m}
                   {monthSummary[i].income+monthSummary[i].expense>0&&(
-                    <span style={{position:"absolute",top:-2,right:-2,width:7,height:7,borderRadius:"50%",background:"#6366f1",border:"2px solid #0f172a"}}></span>
+                    <span style={{position:"absolute",top:2,right:2,width:6,height:6,borderRadius:"50%",background:viewMonth===i?"#fff":"#6366f1",border:"1.5px solid #0f172a"}}/>
                   )}
                 </button>
               ))}
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:14}}>
-              <KpiCard icon="💹" label={`รายรับ ${MONTHS_FULL[viewMonth]}`}  value={fmt(monthSummary[viewMonth].income)}  color={INCOME_COLOR} />
-              <KpiCard icon="💸" label={`รายจ่าย ${MONTHS_FULL[viewMonth]}`} value={fmt(monthSummary[viewMonth].expense)} color={EXPENSE_COLOR} />
+            <div className="kpi-grid-3" style={{marginBottom:12}}>
+              <KpiCard icon="💹" label={`รายรับ`}  value={fmt(monthSummary[viewMonth].income)}  color={INCOME_COLOR} />
+              <KpiCard icon="💸" label={`รายจ่าย`} value={fmt(monthSummary[viewMonth].expense)} color={EXPENSE_COLOR} />
               <KpiCard icon="🏦" label="คงเหลือ" value={fmt(monthSummary[viewMonth].balance)} color={monthSummary[viewMonth].balance>=0?BALANCE_COLOR:"#f43f5e"} />
             </div>
             <div style={S.card}>
               <div style={S.cardTitle}>{MONTHS_FULL[viewMonth]} {viewYear}</div>
               {monthTx.length===0
-                ?<div style={{textAlign:"center",color:"#64748b",padding:28}}>ไม่มีรายการในเดือนนี้</div>
+                ?<div style={{textAlign:"center",color:"#64748b",padding:28,fontSize:13}}>ไม่มีรายการในเดือนนี้</div>
                 :<div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {monthTx.map(t=><TxRow key={t.id} t={t} colorMap={colorMap} onEdit={openEdit} onDelete={setDeleteConfirm}/>)}
+                  {monthTx.map(t=><TxCard key={t.id} t={t} colorMap={colorMap} onEdit={openEdit} onDelete={setDeleteConfirm}/>)}
                 </div>
               }
             </div>
@@ -569,37 +674,37 @@ function App() {
         {/* CATEGORIES */}
         {activeTab==="categories" && (
           <div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:8}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8}}>
               <div style={{display:"flex",gap:5}}>
-                {[["all","ทั้งหมด"],["income","💹 รายรับ"],["expense","💸 รายจ่าย"]].map(([v,lbl])=>(
+                {[["all","ทั้งหมด"],["income","💹"],["expense","💸"]].map(([v,lbl])=>(
                   <button key={v} onClick={()=>setCatFilter(v)} style={{
-                    padding:"6px 12px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:12,
+                    padding:"8px 13px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13,
                     background:catFilter===v?"#6366f1":"#1e293b",color:catFilter===v?"#fff":"#94a3b8"
                   }}>{lbl}</button>
                 ))}
               </div>
-              <button onClick={openAddCat} style={{background:"#6366f1",border:"none",color:"#fff",padding:"7px 14px",borderRadius:10,fontWeight:700,cursor:"pointer",fontSize:13}}>
-                + เพิ่มหมวดหมู่
+              <button onClick={openAddCat} style={{background:"#6366f1",border:"none",color:"#fff",padding:"9px 16px",borderRadius:12,fontWeight:700,cursor:"pointer",fontSize:14}}>
+                + เพิ่ม
               </button>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
               {filteredCats.map(cat=>{
                 const use=transactions.filter(t=>t.category===cat.name).length;
                 return (
-                  <div key={cat.id} style={{...S.card,borderLeft:`4px solid ${cat.color}`}}>
+                  <div key={cat.id} style={{...S.card,borderLeft:`4px solid ${cat.color}`,padding:"12px 14px"}}>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-                      <div style={{width:26,height:26,borderRadius:"50%",background:cat.color,flexShrink:0}} />
-                      <div style={{flex:1}}>
-                        <div style={{fontWeight:700,fontSize:13,color:"#f1f5f9"}}>{cat.name}</div>
+                      <div style={{width:28,height:28,borderRadius:"50%",background:cat.color,flexShrink:0}} />
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:13,color:"#f1f5f9",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cat.name}</div>
                         <div style={{fontSize:10,color:cat.type==="income"?INCOME_COLOR:"#fb923c"}}>
-                          {cat.type==="income"?"รายรับ":"รายจ่าย"}
+                          {cat.type==="income"?"💹 รายรับ":"💸 รายจ่าย"}
                         </div>
                       </div>
                     </div>
-                    <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>ใช้ใน {use} รายการ</div>
+                    <div style={{fontSize:11,color:"#64748b",marginBottom:8}}>{use} รายการ</div>
                     <div style={{display:"flex",gap:5}}>
-                      <button onClick={()=>openEditCat(cat)} style={{flex:1,padding:"5px 0",borderRadius:7,border:"1px solid #6366f155",background:"#6366f111",color:"#a5b4fc",cursor:"pointer",fontWeight:600,fontSize:11}}>✏️ แก้ไข</button>
-                      <button onClick={()=>setDeleteCatConfirm({cat,usageCount:use})} style={{flex:1,padding:"5px 0",borderRadius:7,border:"1px solid #f43f5e55",background:"#f43f5e11",color:"#fda4af",cursor:"pointer",fontWeight:600,fontSize:11}}>🗑️ ลบ</button>
+                      <button onClick={()=>openEditCat(cat)} style={{flex:1,padding:"7px 0",borderRadius:8,border:"1px solid #6366f155",background:"#6366f111",color:"#a5b4fc",cursor:"pointer",fontWeight:600,fontSize:12}}>✏️</button>
+                      <button onClick={()=>setDeleteCatConfirm({cat,usageCount:use})} style={{flex:1,padding:"7px 0",borderRadius:8,border:"1px solid #f43f5e55",background:"#f43f5e11",color:"#fda4af",cursor:"pointer",fontWeight:600,fontSize:12}}>🗑️</button>
                     </div>
                   </div>
                 );
@@ -609,125 +714,128 @@ function App() {
         )}
       </div>
 
-      {/* MODAL รายการ */}
+      {/* MODAL เพิ่ม/แก้ไขรายการ */}
       {showModal&&(
-        <Overlay>
-          <div style={S.modalBox} className="modal-scroll">
-            <div style={{fontSize:17,fontWeight:700,marginBottom:18,color:"#f1f5f9"}}>{editItem?"✏️ แก้ไขรายการ":"➕ เพิ่มรายการใหม่"}</div>
-            <label style={S.label}>วันที่</label>
-            <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} style={{...S.input,marginBottom:12}} />
-            <label style={S.label}>ประเภท</label>
-            <div style={{display:"flex",gap:8,marginBottom:12}}>
-              {[["income","💹 รายรับ"],["expense","💸 รายจ่าย"]].map(([v,lbl])=>(
-                <button key={v} onClick={()=>handleTypeChange(v)} style={{
-                  flex:1,padding:"9px 0",borderRadius:10,border:"2px solid",
-                  borderColor:form.type===v?(v==="income"?INCOME_COLOR:EXPENSE_COLOR):"#334155",
-                  background:form.type===v?(v==="income"?"#064e3b":"#4c0519"):"transparent",
-                  color:form.type===v?"#fff":"#94a3b8",fontWeight:700,cursor:"pointer",fontSize:13
-                }}>{lbl}</button>
-              ))}
-            </div>
-            <label style={S.label}>หมวดหมู่</label>
-            <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} style={{...S.input,marginBottom:12}}>
-              {formCats.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
-            </select>
-            <label style={S.label}>รายละเอียด</label>
-            <input placeholder="บันทึกรายละเอียด..." value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} style={{...S.input,marginBottom:12}} />
-            <label style={S.label}>จำนวนเงิน (บาท)</label>
-            <input type="number" placeholder="0" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} style={{...S.input,marginBottom:18}} min="0" />
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setShowModal(false)} style={S.cancelBtn}>ยกเลิก</button>
-              <button onClick={saveForm} style={S.primaryBtn}>{editItem?"บันทึกการแก้ไข":"เพิ่มรายการ"}</button>
-            </div>
+        <ModalSheet onClose={()=>setShowModal(false)}>
+          <div style={{fontSize:16,fontWeight:700,marginBottom:16,color:"#f1f5f9"}}>{editItem?"✏️ แก้ไขรายการ":"➕ เพิ่มรายการใหม่"}</div>
+
+          <label style={S.label}>ประเภท</label>
+          <div style={{display:"flex",gap:8,marginBottom:14}}>
+            <button onClick={()=>handleTypeChange("income")}  style={S.typeBtn(form.type==="income", INCOME_COLOR,"#064e3b")}>💹 รายรับ</button>
+            <button onClick={()=>handleTypeChange("expense")} style={S.typeBtn(form.type==="expense",EXPENSE_COLOR,"#4c0519")}>💸 รายจ่าย</button>
           </div>
-        </Overlay>
+
+          <label style={S.label}>วันที่</label>
+          <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} className="inp" style={{marginBottom:12}} />
+
+          <label style={S.label}>หมวดหมู่</label>
+          <select value={form.category} onChange={e=>setForm(f=>({...f,category:e.target.value}))} className="inp" style={{marginBottom:12}}>
+            {formCats.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+          </select>
+
+          <label style={S.label}>รายละเอียด</label>
+          <input placeholder="บันทึกรายละเอียด..." value={form.desc} onChange={e=>setForm(f=>({...f,desc:e.target.value}))} className="inp" style={{marginBottom:12}} />
+
+          <label style={S.label}>จำนวนเงิน (บาท)</label>
+          <input type="number" placeholder="0" value={form.amount} onChange={e=>setForm(f=>({...f,amount:e.target.value}))} className="inp" style={{marginBottom:4}} inputMode="numeric" min="0" />
+
+          <div className="btn-row">
+            <button onClick={()=>setShowModal(false)} className="btn-cancel">ยกเลิก</button>
+            <button onClick={saveForm} className="btn-primary">{editItem?"บันทึก":"เพิ่มรายการ"}</button>
+          </div>
+        </ModalSheet>
       )}
 
       {/* MODAL หมวดหมู่ */}
       {showCatModal&&(
-        <Overlay>
-          <div style={S.modalBox} className="modal-scroll">
-            <div style={{fontSize:17,fontWeight:700,marginBottom:18,color:"#f1f5f9"}}>{editCat?"✏️ แก้ไขหมวดหมู่":"🏷️ เพิ่มหมวดหมู่ใหม่"}</div>
-            <label style={S.label}>ประเภท</label>
-            <div style={{display:"flex",gap:8,marginBottom:12}}>
-              {[["income","💹 รายรับ"],["expense","💸 รายจ่าย"]].map(([v,lbl])=>(
-                <button key={v} onClick={()=>setCatForm(f=>({...f,type:v}))} style={{
-                  flex:1,padding:"9px 0",borderRadius:10,border:"2px solid",
-                  borderColor:catForm.type===v?(v==="income"?INCOME_COLOR:EXPENSE_COLOR):"#334155",
-                  background:catForm.type===v?(v==="income"?"#064e3b":"#4c0519"):"transparent",
-                  color:catForm.type===v?"#fff":"#94a3b8",fontWeight:700,cursor:"pointer",fontSize:13
-                }}>{lbl}</button>
-              ))}
-            </div>
-            <label style={S.label}>ชื่อหมวดหมู่</label>
-            <input placeholder="เช่น ค่าอาหาร, เงินเดือน..." value={catForm.name} onChange={e=>setCatForm(f=>({...f,name:e.target.value}))} style={{...S.input,marginBottom:12}} />
-            <label style={S.label}>สี</label>
-            <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:14}}>
-              {COLOR_PALETTE.map(color=>(
-                <button key={color} onClick={()=>setCatForm(f=>({...f,color}))} style={{
-                  width:26,height:26,borderRadius:"50%",background:color,border:"none",cursor:"pointer",
-                  outline:catForm.color===color?"3px solid #fff":"none",outlineOffset:2,
-                  transform:catForm.color===color?"scale(1.2)":"scale(1)",transition:"all .15s"
-                }} />
-              ))}
-            </div>
-            {catForm.name.trim()&&(
-              <div style={{display:"flex",alignItems:"center",gap:8,background:"#0f172a",padding:"8px 12px",borderRadius:9,marginBottom:14}}>
-                <div style={{width:22,height:22,borderRadius:"50%",background:catForm.color}} />
-                <span style={{fontWeight:700,color:"#f1f5f9",fontSize:13}}>{catForm.name}</span>
-                <span style={{fontSize:10,color:catForm.type==="income"?INCOME_COLOR:"#fb923c",marginLeft:"auto"}}>
-                  {catForm.type==="income"?"รายรับ":"รายจ่าย"}
-                </span>
-              </div>
-            )}
-            {!editCat&&catForm.name.trim()&&categories.some(c=>c.name===catForm.name.trim())&&(
-              <div style={{color:"#f43f5e",fontSize:12,marginBottom:10}}>⚠️ ชื่อนี้มีอยู่แล้ว</div>
-            )}
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setShowCatModal(false)} style={S.cancelBtn}>ยกเลิก</button>
-              <button onClick={saveCat} style={S.primaryBtn}>{editCat?"บันทึกการแก้ไข":"เพิ่มหมวดหมู่"}</button>
-            </div>
+        <ModalSheet onClose={()=>setShowCatModal(false)}>
+          <div style={{fontSize:16,fontWeight:700,marginBottom:16,color:"#f1f5f9"}}>{editCat?"✏️ แก้ไขหมวดหมู่":"🏷️ เพิ่มหมวดหมู่"}</div>
+
+          <label style={S.label}>ประเภท</label>
+          <div style={{display:"flex",gap:8,marginBottom:14}}>
+            <button onClick={()=>setCatForm(f=>({...f,type:"income"}))}  style={S.typeBtn(catForm.type==="income", INCOME_COLOR,"#064e3b")}>💹 รายรับ</button>
+            <button onClick={()=>setCatForm(f=>({...f,type:"expense"}))} style={S.typeBtn(catForm.type==="expense",EXPENSE_COLOR,"#4c0519")}>💸 รายจ่าย</button>
           </div>
-        </Overlay>
+
+          <label style={S.label}>ชื่อหมวดหมู่</label>
+          <input placeholder="เช่น ค่าอาหาร, เงินเดือน..." value={catForm.name} onChange={e=>setCatForm(f=>({...f,name:e.target.value}))} className="inp" style={{marginBottom:12}} />
+
+          <label style={S.label}>สี</label>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+            {COLOR_PALETTE.map(color=>(
+              <button key={color} onClick={()=>setCatForm(f=>({...f,color}))} style={{
+                width:30,height:30,borderRadius:"50%",background:color,border:"none",cursor:"pointer",
+                outline:catForm.color===color?"3px solid #fff":"2px solid transparent",outlineOffset:2,
+                transform:catForm.color===color?"scale(1.15)":"scale(1)",transition:"all .15s"
+              }} />
+            ))}
+          </div>
+
+          {catForm.name.trim()&&(
+            <div style={{display:"flex",alignItems:"center",gap:8,background:"#0f172a",padding:"10px 14px",borderRadius:10,marginBottom:12}}>
+              <div style={{width:24,height:24,borderRadius:"50%",background:catForm.color}} />
+              <span style={{fontWeight:700,color:"#f1f5f9"}}>{catForm.name}</span>
+              <span style={{fontSize:11,color:catForm.type==="income"?INCOME_COLOR:"#fb923c",marginLeft:"auto"}}>
+                {catForm.type==="income"?"รายรับ":"รายจ่าย"}
+              </span>
+            </div>
+          )}
+          {!editCat&&catForm.name.trim()&&categories.some(c=>c.name===catForm.name.trim())&&(
+            <div style={{color:"#f43f5e",fontSize:12,marginBottom:10}}>⚠️ ชื่อนี้มีอยู่แล้ว</div>
+          )}
+          <div className="btn-row">
+            <button onClick={()=>setShowCatModal(false)} className="btn-cancel">ยกเลิก</button>
+            <button onClick={saveCat} className="btn-primary">{editCat?"บันทึก":"เพิ่มหมวดหมู่"}</button>
+          </div>
+        </ModalSheet>
       )}
 
       {/* MODAL ยืนยันลบรายการ */}
       {deleteConfirm&&(
-        <Overlay>
-          <div style={{...S.modalBox,width:"min(360px,95vw)"}}>
-            <div style={{fontSize:17,fontWeight:700,marginBottom:10,color:"#f43f5e"}}>🗑️ ยืนยันการลบ</div>
-            <div style={{color:"#94a3b8",marginBottom:18,fontSize:13}}>
-              ลบรายการ <strong style={{color:"#f1f5f9"}}>{deleteConfirm.desc||deleteConfirm.category}</strong> มูลค่า <strong style={{color:EXPENSE_COLOR}}>{fmt(deleteConfirm.amount)}</strong>?
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setDeleteConfirm(null)} style={S.cancelBtn}>ยกเลิก</button>
-              <button onClick={()=>deleteItem(deleteConfirm.id)} style={{...S.primaryBtn,background:"#f43f5e"}}>ลบเลย</button>
-            </div>
+        <ModalSheet onClose={()=>setDeleteConfirm(null)} center={true}>
+          <div style={{fontSize:16,fontWeight:700,marginBottom:10,color:"#f43f5e"}}>🗑️ ยืนยันการลบ</div>
+          <div style={{color:"#94a3b8",marginBottom:18,fontSize:14,lineHeight:1.6}}>
+            ลบ <strong style={{color:"#f1f5f9"}}>{deleteConfirm.desc||deleteConfirm.category}</strong><br/>
+            <strong style={{color:EXPENSE_COLOR}}>{fmt(deleteConfirm.amount)}</strong> ?
           </div>
-        </Overlay>
+          <div className="btn-row" style={{marginTop:0}}>
+            <button onClick={()=>setDeleteConfirm(null)} className="btn-cancel">ยกเลิก</button>
+            <button onClick={()=>deleteItem(deleteConfirm.id)} className="btn-danger">ลบเลย</button>
+          </div>
+        </ModalSheet>
       )}
 
       {/* MODAL ยืนยันลบหมวดหมู่ */}
       {deleteCatConfirm&&(
-        <Overlay>
-          <div style={{...S.modalBox,width:"min(360px,95vw)"}}>
-            <div style={{fontSize:17,fontWeight:700,marginBottom:12,color:"#f43f5e"}}>🗑️ ลบหมวดหมู่</div>
-            <div style={{display:"flex",alignItems:"center",gap:8,background:"#0f172a",padding:"8px 12px",borderRadius:9,marginBottom:12}}>
-              <div style={{width:22,height:22,borderRadius:"50%",background:deleteCatConfirm.cat.color}} />
-              <span style={{fontWeight:700,color:"#f1f5f9"}}>{deleteCatConfirm.cat.name}</span>
-            </div>
-            {deleteCatConfirm.usageCount>0&&(
-              <div style={{background:"#4c0519",border:"1px solid #f43f5e55",borderRadius:9,padding:"9px 12px",marginBottom:14,fontSize:12,color:"#fda4af"}}>
-                ⚠️ ใช้ใน <strong>{deleteCatConfirm.usageCount} รายการ</strong> อยู่
-              </div>
-            )}
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setDeleteCatConfirm(null)} style={S.cancelBtn}>ยกเลิก</button>
-              <button onClick={deleteCat} style={{...S.primaryBtn,background:"#f43f5e"}}>ลบหมวดหมู่</button>
-            </div>
+        <ModalSheet onClose={()=>setDeleteCatConfirm(null)} center={true}>
+          <div style={{fontSize:16,fontWeight:700,marginBottom:12,color:"#f43f5e"}}>🗑️ ลบหมวดหมู่</div>
+          <div style={{display:"flex",alignItems:"center",gap:8,background:"#0f172a",padding:"10px 14px",borderRadius:10,marginBottom:12}}>
+            <div style={{width:24,height:24,borderRadius:"50%",background:deleteCatConfirm.cat.color}} />
+            <span style={{fontWeight:700,color:"#f1f5f9"}}>{deleteCatConfirm.cat.name}</span>
           </div>
-        </Overlay>
+          {deleteCatConfirm.usageCount>0&&(
+            <div style={{background:"#4c0519",border:"1px solid #f43f5e55",borderRadius:10,padding:"10px 14px",marginBottom:14,fontSize:13,color:"#fda4af"}}>
+              ⚠️ ใช้ใน <strong>{deleteCatConfirm.usageCount} รายการ</strong>
+            </div>
+          )}
+          <div className="btn-row" style={{marginTop:0}}>
+            <button onClick={()=>setDeleteCatConfirm(null)} className="btn-cancel">ยกเลิก</button>
+            <button onClick={deleteCat} className="btn-danger">ลบหมวดหมู่</button>
+          </div>
+        </ModalSheet>
       )}
+
+      {/* Bottom Navigation Bar (mobile only) */}
+      <nav className="bottom-nav">
+        {tabs.map(({k,icon,label})=>(
+          <button key={k} className={"bnav-btn"+(activeTab===k?" active":"")} onClick={()=>setActiveTab(k)}>
+            <span className="bnav-icon">{icon}</span>
+            <span className="bnav-label">{label}</span>
+            <span className="bnav-dot"/>
+          </button>
+        ))}
+      </nav>
+
     </div>
   );
 }
