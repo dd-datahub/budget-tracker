@@ -137,7 +137,7 @@ const COLOR_PALETTE = [
 const MONTHS      = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const MONTHS_FULL = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
 
-const fmt = n => new Intl.NumberFormat("th-TH",{style:"currency",currency:"THB",maximumFractionDigits:0}).format(n);
+const fmt = n => new Intl.NumberFormat("th-TH",{style:"currency",currency:"THB",minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
 const uid = () => "cat_" + Math.random().toString(36).slice(2,9);
 const today = () => new Date().toISOString().slice(0,10);
 const formatDate = d => { const [y,m,day]=d.split("-"); return `${day}/${m}/${(+y+543).toString().slice(2)}`; };
