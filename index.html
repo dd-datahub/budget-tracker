@@ -56,8 +56,9 @@
     .app-header { background: linear-gradient(135deg,#1e40af,#7c3aed); padding: 10px 14px; padding-top: calc(10px + env(safe-area-inset-top,0px)); display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 20px rgba(0,0,0,.4); position: sticky; top: 0; z-index: 100; }
 
     /* ── KPI Grid ── */
-    .kpi-grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+    .kpi-grid-3 { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; margin-bottom: 14px; }
     .kpi-card { background: #1e293b; border-radius: 12px; padding: 12px; border: 1px solid #334155; }
+    @media (min-width: 700px) { .kpi-grid-3 { grid-template-columns: repeat(4,1fr); } }
 
     /* ── Tx Cards (mobile) ── */
     .tx-card-list { display: flex; flex-direction: column; gap: 8px; }
@@ -110,21 +111,28 @@ const { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, Carte
 
 const INCOME_COLOR  = "#10b981";
 const EXPENSE_COLOR = "#f43f5e";
+const INVEST_COLOR  = "#f59e0b";
 const BALANCE_COLOR = "#6366f1";
 
 const INIT_CATS = [
-  { id:"c1",  type:"income",  name:"เงินเดือน",       color:"#10b981" },
-  { id:"c2",  type:"income",  name:"โบนัส",            color:"#34d399" },
-  { id:"c3",  type:"income",  name:"รายได้อื่นๆ",      color:"#6ee7b7" },
-  { id:"c4",  type:"expense", name:"อาหาร",            color:"#f43f5e" },
-  { id:"c5",  type:"expense", name:"เดินทาง",          color:"#fb923c" },
-  { id:"c6",  type:"expense", name:"ที่พัก",           color:"#fbbf24" },
-  { id:"c7",  type:"expense", name:"สุขภาพ",           color:"#a78bfa" },
-  { id:"c8",  type:"expense", name:"ความบันเทิง",      color:"#38bdf8" },
-  { id:"c9",  type:"expense", name:"ช้อปปิ้ง",         color:"#f472b6" },
-  { id:"c10", type:"expense", name:"ค่าสาธารณูปโภค",  color:"#94a3b8" },
-  { id:"c11", type:"expense", name:"การศึกษา",         color:"#4ade80" },
-  { id:"c12", type:"expense", name:"อื่นๆ",            color:"#cbd5e1" },
+  { id:"c1",  type:"income",  name:"เงินเดือน",        color:"#10b981" },
+  { id:"c2",  type:"income",  name:"โบนัส",             color:"#34d399" },
+  { id:"c3",  type:"income",  name:"รายได้อื่นๆ",       color:"#6ee7b7" },
+  { id:"c4",  type:"expense", name:"อาหาร",             color:"#f43f5e" },
+  { id:"c5",  type:"expense", name:"เดินทาง",           color:"#fb923c" },
+  { id:"c6",  type:"expense", name:"ที่พัก",            color:"#fbbf24" },
+  { id:"c7",  type:"expense", name:"สุขภาพ",            color:"#a78bfa" },
+  { id:"c8",  type:"expense", name:"ความบันเทิง",       color:"#38bdf8" },
+  { id:"c9",  type:"expense", name:"ช้อปปิ้ง",          color:"#f472b6" },
+  { id:"c10", type:"expense", name:"ค่าสาธารณูปโภค",   color:"#94a3b8" },
+  { id:"c11", type:"expense", name:"การศึกษา",          color:"#4ade80" },
+  { id:"c12", type:"expense", name:"อื่นๆ",             color:"#cbd5e1" },
+  { id:"c13", type:"invest",  name:"ออมทรัพย์/ลงทุน",  color:"#f59e0b" },
+  { id:"c14", type:"invest",  name:"ประกันชีวิต",       color:"#22c55e" },
+  { id:"c15", type:"invest",  name:"คริปโต",            color:"#f97316" },
+  { id:"c16", type:"invest",  name:"กองทุน",            color:"#06b6d4" },
+  { id:"c17", type:"invest",  name:"หุ้น/ETF",          color:"#8b5cf6" },
+  { id:"c18", type:"invest",  name:"ทอง",               color:"#eab308" },
 ];
 
 const COLOR_PALETTE = [
@@ -199,7 +207,7 @@ function TxCard({t,colorMap,onEdit,onDelete}) {
   return (
     <div style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:"#1e293b",borderRadius:12,border:"1px solid #334155"}}>
       <div style={{width:40,height:40,borderRadius:12,background:(colorMap[t.category]||"#64748b")+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
-        {t.type==="income"?"💹":"💸"}
+        {t.type==="income"?"💹":t.type==="invest"?"📈":"💸"}
       </div>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontWeight:700,fontSize:14,color:"#f1f5f9",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.desc||t.category}</div>
@@ -209,8 +217,8 @@ function TxCard({t,colorMap,onEdit,onDelete}) {
         </div>
       </div>
       <div style={{textAlign:"right",flexShrink:0}}>
-        <div style={{fontWeight:800,fontSize:15,color:t.type==="income"?INCOME_COLOR:EXPENSE_COLOR}}>
-          {t.type==="expense"?"-":"+"}{fmt(t.amount)}
+        <div style={{fontWeight:800,fontSize:15,color:t.type==="income"?INCOME_COLOR:t.type==="invest"?INVEST_COLOR:EXPENSE_COLOR}}>
+          {t.type==="income"?"+":"-"}{fmt(t.amount)}
         </div>
         <div style={{display:"flex",gap:4,marginTop:4,justifyContent:"flex-end"}}>
           <button onClick={()=>onEdit(t)} style={iconBtn("#6366f1")}>✏️</button>
@@ -311,6 +319,7 @@ function App() {
 
   const incomeCats  = useMemo(()=>categories.filter(c=>c.type==="income"),  [categories]);
   const expenseCats = useMemo(()=>categories.filter(c=>c.type==="expense"), [categories]);
+  const investCats  = useMemo(()=>categories.filter(c=>c.type==="invest"),  [categories]);
   const colorMap    = useMemo(()=>Object.fromEntries(categories.map(c=>[c.name,c.color])), [categories]);
 
   const years = useMemo(()=>{
@@ -327,9 +336,10 @@ function App() {
 
   const monthSummary = useMemo(()=>MONTHS.map((m,idx)=>{
     const rows=transactions.filter(t=>+t.date.slice(0,4)===viewYear&&+t.date.slice(5,7)-1===idx);
-    const income=rows.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+    const income =rows.filter(t=>t.type==="income" ).reduce((s,t)=>s+t.amount,0);
     const expense=rows.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
-    return {month:m,monthFull:MONTHS_FULL[idx],idx,income,expense,balance:income-expense};
+    const invest =rows.filter(t=>t.type==="invest" ).reduce((s,t)=>s+t.amount,0);
+    return {month:m,monthFull:MONTHS_FULL[idx],idx,income,expense,invest,balance:income-expense-invest};
   }),[transactions,viewYear]);
 
   const monthTx = useMemo(()=>
@@ -339,12 +349,16 @@ function App() {
 
   const dashStats = useMemo(()=>{
     const yr=transactions.filter(t=>+t.date.slice(0,4)===viewYear);
-    const totalIncome=yr.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0);
+    const totalIncome =yr.filter(t=>t.type==="income" ).reduce((s,t)=>s+t.amount,0);
     const totalExpense=yr.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0);
-    const catTotals={};
-    yr.filter(t=>t.type==="expense").forEach(t=>{catTotals[t.category]=(catTotals[t.category]||0)+t.amount;});
-    return {totalIncome,totalExpense,balance:totalIncome-totalExpense,
-      pieData:Object.entries(catTotals).map(([k,v])=>({name:k,value:v}))};
+    const totalInvest =yr.filter(t=>t.type==="invest" ).reduce((s,t)=>s+t.amount,0);
+    const expTotals={}, invTotals={};
+    yr.filter(t=>t.type==="expense").forEach(t=>{expTotals[t.category]=(expTotals[t.category]||0)+t.amount;});
+    yr.filter(t=>t.type==="invest" ).forEach(t=>{invTotals[t.category]=(invTotals[t.category]||0)+t.amount;});
+    return {totalIncome,totalExpense,totalInvest,
+      balance:totalIncome-totalExpense-totalInvest,
+      expPieData:Object.entries(expTotals).map(([k,v])=>({name:k,value:v})),
+      invPieData:Object.entries(invTotals).map(([k,v])=>({name:k,value:v}))};
   },[transactions,viewYear]);
 
   const filteredTx = useMemo(()=>
@@ -383,7 +397,7 @@ function App() {
   }
   function deleteItem(id) { setTransactions(prev=>prev.filter(t=>t.id!==id)); setDeleteConfirm(null); }
   function handleTypeChange(v) {
-    const first=v==="income"?incomeCats[0]?.name:expenseCats[0]?.name;
+    const first = v==="income"?incomeCats[0]?.name : v==="expense"?expenseCats[0]?.name : investCats[0]?.name;
     setForm(f=>({...f,type:v,category:first||""}));
   }
 
@@ -408,7 +422,7 @@ function App() {
     setDeleteCatConfirm(null);
   }
 
-  const formCats = form.type==="income"?incomeCats:expenseCats;
+  const formCats = form.type==="income"?incomeCats : form.type==="expense"?expenseCats : investCats;
   const tabs = [
     {k:"dashboard",  icon:"📊", label:"หน้าหลัก"},
     {k:"transactions",icon:"📋",label:"รายการ"},
@@ -494,13 +508,14 @@ function App() {
         {activeTab==="dashboard" && (
           <div>
             <div className="kpi-grid-3">
-              <KpiCard icon="💹" label="รายรับทั้งปี"  value={fmt(dashStats.totalIncome)}  color={INCOME_COLOR} />
-              <KpiCard icon="💸" label="รายจ่ายทั้งปี" value={fmt(dashStats.totalExpense)} color={EXPENSE_COLOR} />
-              <KpiCard icon="🏦" label="คงเหลือ"       value={fmt(dashStats.balance)}      color={dashStats.balance>=0?BALANCE_COLOR:"#f43f5e"} />
+              <KpiCard icon="💹" label="รายรับทั้งปี"   value={fmt(dashStats.totalIncome)}  color={INCOME_COLOR} />
+              <KpiCard icon="💸" label="รายจ่ายทั้งปี"  value={fmt(dashStats.totalExpense)} color={EXPENSE_COLOR} />
+              <KpiCard icon="📈" label="ลงทุน/ออมทั้งปี" value={fmt(dashStats.totalInvest)}  color={INVEST_COLOR} />
+              <KpiCard icon="🏦" label="เงินคงเหลือ"    value={fmt(dashStats.balance)}      color={dashStats.balance>=0?BALANCE_COLOR:"#f43f5e"} />
             </div>
 
             <div style={{...S.card,marginBottom:12}}>
-              <div style={S.cardTitle}>รายรับ-รายจ่ายรายเดือน {viewYear}</div>
+              <div style={S.cardTitle}>รายรับ-รายจ่าย-ลงทุน รายเดือน {viewYear}</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={monthSummary} margin={{top:4,right:4,bottom:0,left:-16}}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -508,8 +523,9 @@ function App() {
                   <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:9}} tickFormatter={v=>(v/1000)+"k"} />
                   <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8,fontSize:12}} />
                   <Legend wrapperStyle={{color:"#94a3b8",fontSize:11}} />
-                  <Bar dataKey="income"  name="รายรับ"  fill={INCOME_COLOR}  radius={[4,4,0,0]} />
-                  <Bar dataKey="expense" name="รายจ่าย" fill={EXPENSE_COLOR} radius={[4,4,0,0]} />
+                  <Bar dataKey="income"  name="รายรับ"    fill={INCOME_COLOR}  radius={[4,4,0,0]} />
+                  <Bar dataKey="expense" name="รายจ่าย"   fill={EXPENSE_COLOR} radius={[4,4,0,0]} />
+                  <Bar dataKey="invest"  name="ลงทุน/ออม" fill={INVEST_COLOR}  radius={[4,4,0,0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -517,11 +533,11 @@ function App() {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
               <div style={S.card}>
                 <div style={S.cardTitle}>สัดส่วนรายจ่าย</div>
-                {dashStats.pieData.length>0?(
+                {dashStats.expPieData.length>0?(
                   <ResponsiveContainer width="100%" height={160}>
                     <PieChart>
-                      <Pie data={dashStats.pieData} cx="50%" cy="50%" outerRadius={58} dataKey="value" nameKey="name" labelLine={false} fontSize={9}>
-                        {dashStats.pieData.map((e,i)=><Cell key={i} fill={colorMap[e.name]||"#6366f1"} />)}
+                      <Pie data={dashStats.expPieData} cx="50%" cy="50%" outerRadius={58} dataKey="value" nameKey="name" labelLine={false} fontSize={9}>
+                        {dashStats.expPieData.map((e,i)=><Cell key={i} fill={colorMap[e.name]||"#f43f5e"} />)}
                       </Pie>
                       <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8,fontSize:11}} />
                       <Legend wrapperStyle={{color:"#94a3b8",fontSize:10}} />
@@ -530,18 +546,33 @@ function App() {
                 ):<div style={{textAlign:"center",color:"#64748b",padding:24,fontSize:13}}>ยังไม่มีข้อมูล</div>}
               </div>
               <div style={S.card}>
-                <div style={S.cardTitle}>ยอดสะสม</div>
-                <ResponsiveContainer width="100%" height={160}>
-                  <LineChart data={monthSummary.map((m,i)=>({...m,cum:monthSummary.slice(0,i+1).reduce((s,x)=>s+x.balance,0)}))}
-                    margin={{top:4,right:4,bottom:0,left:-16}}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="month" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:9}} />
-                    <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:9}} tickFormatter={v=>(v/1000)+"k"} />
-                    <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8,fontSize:11}} />
-                    <Line type="monotone" dataKey="cum" stroke={BALANCE_COLOR} strokeWidth={2.5} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+                <div style={S.cardTitle}>สัดส่วนลงทุน/ออม</div>
+                {dashStats.invPieData.length>0?(
+                  <ResponsiveContainer width="100%" height={160}>
+                    <PieChart>
+                      <Pie data={dashStats.invPieData} cx="50%" cy="50%" outerRadius={58} dataKey="value" nameKey="name" labelLine={false} fontSize={9}>
+                        {dashStats.invPieData.map((e,i)=><Cell key={i} fill={colorMap[e.name]||"#f59e0b"} />)}
+                      </Pie>
+                      <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8,fontSize:11}} />
+                      <Legend wrapperStyle={{color:"#94a3b8",fontSize:10}} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ):<div style={{textAlign:"center",color:"#64748b",padding:24,fontSize:13}}>ยังไม่มีข้อมูล</div>}
               </div>
+            </div>
+
+            <div style={{...S.card,marginBottom:4}}>
+              <div style={S.cardTitle}>ยอดเงินสะสม</div>
+              <ResponsiveContainer width="100%" height={150}>
+                <LineChart data={monthSummary.map((m,i)=>({...m,cum:monthSummary.slice(0,i+1).reduce((s,x)=>s+x.balance,0)}))}
+                  margin={{top:4,right:4,bottom:0,left:-16}}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="month" stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:9}} />
+                  <YAxis stroke="#94a3b8" tick={{fill:"#94a3b8",fontSize:9}} tickFormatter={v=>(v/1000)+"k"} />
+                  <Tooltip formatter={v=>fmt(v)} contentStyle={{background:"#1e293b",border:"1px solid #334155",borderRadius:8,fontSize:11}} />
+                  <Line type="monotone" dataKey="cum" name="คงเหลือสะสม" stroke={BALANCE_COLOR} strokeWidth={2.5} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </div>
         )}
@@ -554,8 +585,9 @@ function App() {
                 className="inp" style={{flex:1}} />
               <select value={filterType} onChange={e=>setFilterType(e.target.value)} className="inp" style={{width:"auto",paddingLeft:10,paddingRight:10}}>
                 <option value="all">ทั้งหมด</option>
-                <option value="income">รายรับ</option>
-                <option value="expense">รายจ่าย</option>
+                <option value="income">💹 รายรับ</option>
+                <option value="expense">💸 รายจ่าย</option>
+                <option value="invest">📈 ลงทุน/ออม</option>
               </select>
             </div>
             <div style={{marginBottom:10}}>
@@ -636,9 +668,10 @@ function App() {
               ))}
             </div>
             <div className="kpi-grid-3" style={{marginBottom:12}}>
-              <KpiCard icon="💹" label={`รายรับ`}  value={fmt(monthSummary[viewMonth].income)}  color={INCOME_COLOR} />
-              <KpiCard icon="💸" label={`รายจ่าย`} value={fmt(monthSummary[viewMonth].expense)} color={EXPENSE_COLOR} />
-              <KpiCard icon="🏦" label="คงเหลือ" value={fmt(monthSummary[viewMonth].balance)} color={monthSummary[viewMonth].balance>=0?BALANCE_COLOR:"#f43f5e"} />
+              <KpiCard icon="💹" label="รายรับ"      value={fmt(monthSummary[viewMonth].income)}  color={INCOME_COLOR} />
+              <KpiCard icon="💸" label="รายจ่าย"     value={fmt(monthSummary[viewMonth].expense)} color={EXPENSE_COLOR} />
+              <KpiCard icon="📈" label="ลงทุน/ออม"  value={fmt(monthSummary[viewMonth].invest)}  color={INVEST_COLOR} />
+              <KpiCard icon="🏦" label="คงเหลือ"     value={fmt(monthSummary[viewMonth].balance)} color={monthSummary[viewMonth].balance>=0?BALANCE_COLOR:"#f43f5e"} />
             </div>
             <div style={S.card}>
               <div style={S.cardTitle}>{MONTHS_FULL[viewMonth]} {viewYear}</div>
@@ -708,7 +741,7 @@ function App() {
           <div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8}}>
               <div style={{display:"flex",gap:5}}>
-                {[["all","ทั้งหมด"],["income","💹"],["expense","💸"]].map(([v,lbl])=>(
+                {[["all","ทั้งหมด"],["income","💹"],["expense","💸"],["invest","📈"]].map(([v,lbl])=>(
                   <button key={v} onClick={()=>setCatFilter(v)} style={{
                     padding:"8px 13px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13,
                     background:catFilter===v?"#6366f1":"#1e293b",color:catFilter===v?"#fff":"#94a3b8"
@@ -728,8 +761,8 @@ function App() {
                       <div style={{width:28,height:28,borderRadius:"50%",background:cat.color,flexShrink:0}} />
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontWeight:700,fontSize:13,color:"#f1f5f9",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{cat.name}</div>
-                        <div style={{fontSize:10,color:cat.type==="income"?INCOME_COLOR:"#fb923c"}}>
-                          {cat.type==="income"?"💹 รายรับ":"💸 รายจ่าย"}
+                        <div style={{fontSize:10,color:cat.type==="income"?INCOME_COLOR:cat.type==="invest"?INVEST_COLOR:EXPENSE_COLOR}}>
+                          {cat.type==="income"?"💹 รายรับ":cat.type==="invest"?"📈 ลงทุน/ออม":"💸 รายจ่าย"}
                         </div>
                       </div>
                     </div>
@@ -752,9 +785,10 @@ function App() {
           <div style={{fontSize:16,fontWeight:700,marginBottom:16,color:"#f1f5f9"}}>{editItem?"✏️ แก้ไขรายการ":"➕ เพิ่มรายการใหม่"}</div>
 
           <label style={S.label}>ประเภท</label>
-          <div style={{display:"flex",gap:8,marginBottom:14}}>
+          <div style={{display:"flex",gap:6,marginBottom:14}}>
             <button onClick={()=>handleTypeChange("income")}  style={S.typeBtn(form.type==="income", INCOME_COLOR,"#064e3b")}>💹 รายรับ</button>
             <button onClick={()=>handleTypeChange("expense")} style={S.typeBtn(form.type==="expense",EXPENSE_COLOR,"#4c0519")}>💸 รายจ่าย</button>
+            <button onClick={()=>handleTypeChange("invest")}  style={S.typeBtn(form.type==="invest", INVEST_COLOR, "#451a03")}>📈 ลงทุน</button>
           </div>
 
           <label style={S.label}>วันที่</label>
@@ -784,9 +818,10 @@ function App() {
           <div style={{fontSize:16,fontWeight:700,marginBottom:16,color:"#f1f5f9"}}>{editCat?"✏️ แก้ไขหมวดหมู่":"🏷️ เพิ่มหมวดหมู่"}</div>
 
           <label style={S.label}>ประเภท</label>
-          <div style={{display:"flex",gap:8,marginBottom:14}}>
+          <div style={{display:"flex",gap:6,marginBottom:14}}>
             <button onClick={()=>setCatForm(f=>({...f,type:"income"}))}  style={S.typeBtn(catForm.type==="income", INCOME_COLOR,"#064e3b")}>💹 รายรับ</button>
             <button onClick={()=>setCatForm(f=>({...f,type:"expense"}))} style={S.typeBtn(catForm.type==="expense",EXPENSE_COLOR,"#4c0519")}>💸 รายจ่าย</button>
+            <button onClick={()=>setCatForm(f=>({...f,type:"invest"}))}  style={S.typeBtn(catForm.type==="invest", INVEST_COLOR, "#451a03")}>📈 ลงทุน</button>
           </div>
 
           <label style={S.label}>ชื่อหมวดหมู่</label>
