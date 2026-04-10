@@ -274,8 +274,8 @@ function TxCard({t,colorMap,onEdit,onDelete}) {
 
 // ── Profile config ──────────────────────────────────────────────────────────
 const PROFILES = {
-  personal: { label:"ส่วนตัว", icon:"👤", color:"#7c3aed", grad:"linear-gradient(135deg,#1e40af,#7c3aed)" },
-  company:  { label:"บริษัท",  icon:"🏢", color:"#0ea5e9", grad:"linear-gradient(135deg,#0369a1,#0ea5e9)" },
+  personal: { label:"ส่วนตัว", icon:"👤", color:"#7c3aed", grad:"linear-gradient(135deg,#1e40af,#7c3aed)", hasInvest:true  },
+  company:  { label:"บริษัท",  icon:"🏢", color:"#0ea5e9", grad:"linear-gradient(135deg,#0369a1,#0ea5e9)", hasInvest:false },
 };
 // path จะถูกสร้างแบบ dynamic ตาม uid ของผู้ใช้
 
@@ -598,12 +598,12 @@ function App() {
             <div className="kpi-grid-3">
               <KpiCard icon="💹" label="รายรับทั้งปี"   value={fmt(dashStats.totalIncome)}  color={INCOME_COLOR} />
               <KpiCard icon="💸" label="รายจ่ายทั้งปี"  value={fmt(dashStats.totalExpense)} color={EXPENSE_COLOR} />
-              <KpiCard icon="📈" label="ลงทุน/ออมทั้งปี" value={fmt(dashStats.totalInvest)}  color={INVEST_COLOR} />
+              {prof.hasInvest && <KpiCard icon="📈" label="ลงทุน/ออมทั้งปี" value={fmt(dashStats.totalInvest)} color={INVEST_COLOR} />}
               <KpiCard icon="🏦" label="เงินคงเหลือ"    value={fmt(dashStats.balance)}      color={dashStats.balance>=0?BALANCE_COLOR:"#f43f5e"} />
             </div>
 
             <div style={{...S.card,marginBottom:12}}>
-              <div style={S.cardTitle}>รายรับ-รายจ่าย-ลงทุน รายเดือน {viewYear}</div>
+              <div style={S.cardTitle}>รายรับ-รายจ่าย{prof.hasInvest?"-ลงทุน":""} รายเดือน {viewYear}</div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={monthSummary} margin={{top:4,right:4,bottom:0,left:-16}}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -613,12 +613,12 @@ function App() {
                   <Legend wrapperStyle={{color:"#94a3b8",fontSize:11}} />
                   <Bar dataKey="income"  name="รายรับ"    fill={INCOME_COLOR}  radius={[4,4,0,0]} />
                   <Bar dataKey="expense" name="รายจ่าย"   fill={EXPENSE_COLOR} radius={[4,4,0,0]} />
-                  <Bar dataKey="invest"  name="ลงทุน/ออม" fill={INVEST_COLOR}  radius={[4,4,0,0]} />
+                  {prof.hasInvest && <Bar dataKey="invest" name="ลงทุน/ออม" fill={INVEST_COLOR} radius={[4,4,0,0]} />}
                 </BarChart>
               </ResponsiveContainer>
             </div>
 
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:4}}>
+            <div style={{display:"grid",gridTemplateColumns:prof.hasInvest?"1fr 1fr":"1fr",gap:10,marginBottom:4}}>
               <div style={S.card}>
                 <div style={S.cardTitle}>สัดส่วนรายจ่าย</div>
                 {dashStats.expPieData.length>0?(
@@ -633,6 +633,7 @@ function App() {
                   </ResponsiveContainer>
                 ):<div style={{textAlign:"center",color:"#64748b",padding:24,fontSize:13}}>ยังไม่มีข้อมูล</div>}
               </div>
+              {prof.hasInvest && (
               <div style={S.card}>
                 <div style={S.cardTitle}>สัดส่วนลงทุน/ออม</div>
                 {dashStats.invPieData.length>0?(
@@ -647,6 +648,7 @@ function App() {
                   </ResponsiveContainer>
                 ):<div style={{textAlign:"center",color:"#64748b",padding:24,fontSize:13}}>ยังไม่มีข้อมูล</div>}
               </div>
+              )}
             </div>
 
             <div style={{...S.card,marginBottom:4}}>
@@ -675,7 +677,7 @@ function App() {
                 <option value="all">ทั้งหมด</option>
                 <option value="income">💹 รายรับ</option>
                 <option value="expense">💸 รายจ่าย</option>
-                <option value="invest">📈 ลงทุน/ออม</option>
+                {prof.hasInvest && <option value="invest">📈 ลงทุน/ออม</option>}
               </select>
             </div>
             <div style={{marginBottom:10}}>
@@ -758,7 +760,7 @@ function App() {
             <div className="kpi-grid-3" style={{marginBottom:12}}>
               <KpiCard icon="💹" label="รายรับ"      value={fmt(monthSummary[viewMonth].income)}  color={INCOME_COLOR} />
               <KpiCard icon="💸" label="รายจ่าย"     value={fmt(monthSummary[viewMonth].expense)} color={EXPENSE_COLOR} />
-              <KpiCard icon="📈" label="ลงทุน/ออม"  value={fmt(monthSummary[viewMonth].invest)}  color={INVEST_COLOR} />
+              {prof.hasInvest && <KpiCard icon="📈" label="ลงทุน/ออม" value={fmt(monthSummary[viewMonth].invest)} color={INVEST_COLOR} />}
               <KpiCard icon="🏦" label="คงเหลือ"     value={fmt(monthSummary[viewMonth].balance)} color={monthSummary[viewMonth].balance>=0?BALANCE_COLOR:"#f43f5e"} />
             </div>
             <div style={S.card}>
@@ -829,7 +831,7 @@ function App() {
           <div>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,gap:8}}>
               <div style={{display:"flex",gap:5}}>
-                {[["all","ทั้งหมด"],["income","💹"],["expense","💸"],["invest","📈"]].map(([v,lbl])=>(
+                {[["all","ทั้งหมด"],["income","💹"],["expense","💸"],...(prof.hasInvest?[["invest","📈"]]:[])].map(([v,lbl])=>(
                   <button key={v} onClick={()=>setCatFilter(v)} style={{
                     padding:"8px 13px",borderRadius:10,border:"none",cursor:"pointer",fontWeight:700,fontSize:13,
                     background:catFilter===v?"#6366f1":"#1e293b",color:catFilter===v?"#fff":"#94a3b8"
@@ -876,7 +878,7 @@ function App() {
           <div style={{display:"flex",gap:6,marginBottom:14}}>
             <button onClick={()=>handleTypeChange("income")}  style={S.typeBtn(form.type==="income", INCOME_COLOR,"#064e3b")}>💹 รายรับ</button>
             <button onClick={()=>handleTypeChange("expense")} style={S.typeBtn(form.type==="expense",EXPENSE_COLOR,"#4c0519")}>💸 รายจ่าย</button>
-            <button onClick={()=>handleTypeChange("invest")}  style={S.typeBtn(form.type==="invest", INVEST_COLOR, "#451a03")}>📈 ลงทุน</button>
+            {prof.hasInvest && <button onClick={()=>handleTypeChange("invest")} style={S.typeBtn(form.type==="invest", INVEST_COLOR, "#451a03")}>📈 ลงทุน</button>}
           </div>
 
           <label style={S.label}>วันที่</label>
@@ -909,7 +911,7 @@ function App() {
           <div style={{display:"flex",gap:6,marginBottom:14}}>
             <button onClick={()=>setCatForm(f=>({...f,type:"income"}))}  style={S.typeBtn(catForm.type==="income", INCOME_COLOR,"#064e3b")}>💹 รายรับ</button>
             <button onClick={()=>setCatForm(f=>({...f,type:"expense"}))} style={S.typeBtn(catForm.type==="expense",EXPENSE_COLOR,"#4c0519")}>💸 รายจ่าย</button>
-            <button onClick={()=>setCatForm(f=>({...f,type:"invest"}))}  style={S.typeBtn(catForm.type==="invest", INVEST_COLOR, "#451a03")}>📈 ลงทุน</button>
+            {prof.hasInvest && <button onClick={()=>setCatForm(f=>({...f,type:"invest"}))} style={S.typeBtn(catForm.type==="invest", INVEST_COLOR, "#451a03")}>📈 ลงทุน</button>}
           </div>
 
           <label style={S.label}>ชื่อหมวดหมู่</label>
