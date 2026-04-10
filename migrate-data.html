@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>🔄 ย้ายข้อมูลไปที่ Account ใหม่</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    body{font-family:'Sarabun','Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{background:#1e293b;border-radius:16px;padding:28px;width:min(480px,100%);border:1px solid #334155;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+    h1{font-size:20px;font-weight:700;margin-bottom:6px}
+    .sub{color:#94a3b8;font-size:13px;margin-bottom:24px;line-height:1.6}
+    .btn{width:100%;padding:14px;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .btn-google{background:#fff;color:#1a1a1a;margin-bottom:12px}
+    .btn-migrate{background:linear-gradient(135deg,#6366f1,#7c3aed)}
+    .btn-migrate-company{background:linear-gradient(135deg,#0369a1,#0ea5e9)}
+    .status{margin-top:16px;padding:12px 14px;border-radius:10px;font-size:13px;line-height:1.6;display:none}
+    .status.show{display:block}
+    .status.loading{background:#1e3a5f;color:#38bdf8}
+    .status.success{background:#064e3b;color:#34d399}
+    .status.error{background:#4c0519;color:#fda4af}
+    .status.info{background:#1e293b;color:#94a3b8;border:1px solid #334155}
+    .user-bar{display:flex;align-items:center;gap:10px;padding:12px 14px;background:#0f172a;border-radius:10px;margin-bottom:20px;font-size:13px}
+    .divider{border:none;border-top:1px solid #334155;margin:20px 0}
+    .section-label{font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px}
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🔄 ย้ายข้อมูลบัญชีเดิม</h1>
+  <p class="sub">ย้ายข้อมูลจาก path เดิม (<code style="background:#0f172a;padding:2px 6px;border-radius:4px;font-size:12px">budget/personal</code> และ <code style="background:#0f172a;padding:2px 6px;border-radius:4px;font-size:12px">budget/company</code>) ไปที่ path ใหม่ที่ผูกกับ Google Account ของคุณ</p>
+
+  <!-- Login -->
+  <div id="loginSection">
+    <button class="btn btn-google" onclick="doLogin()" id="loginBtn">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"/>
+      เข้าสู่ระบบด้วย Google
+    </button>
+    <div class="status info show">ต้อง Login ด้วย Google Account เดิมที่ใช้กับแอป Budget Tracker</div>
+  </div>
+
+  <!-- Migrate section -->
+  <div id="migrateSection" style="display:none">
+    <div class="user-bar" id="userBar"></div>
+
+    <div class="section-label">เลือกข้อมูลที่ต้องการย้าย</div>
+
+    <button class="btn btn-migrate" onclick="migrate('personal')" id="btnPersonal" style="margin-bottom:10px">
+      👤 ย้ายข้อมูลส่วนตัว (budget/personal)
+    </button>
+    <button class="btn btn-migrate-company" onclick="migrate('company')" id="btnCompany">
+      🏢 ย้ายข้อมูลบริษัท (budget/company)
+    </button>
+  </div>
+
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyDH8epGYAqBFATFo_K_VydE7cTVIIqM6YY",
+  authDomain: "budget-tracker-app-b6233.firebaseapp.com",
+  databaseURL: "https://budget-tracker-app-b6233-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "budget-tracker-app-b6233",
+  storageBucket: "budget-tracker-app-b6233.firebasestorage.app",
+  messagingSenderId: "604852078953",
+  appId: "1:604852078953:web:a6c255cd84b681419495f8"
+};
+firebase.initializeApp(firebaseConfig);
+const db   = firebase.database();
+const auth = firebase.auth();
+
+let currentUser = null;
+
+auth.getRedirectResult().catch(e => console.error('Redirect error:', e));
+
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('migrateSection').style.display = 'block';
+    const bar = document.getElementById('userBar');
+    const avatar = user.photoURL
+      ? `<img src="${user.photoURL}" width="28" height="28" style="border-radius:50%">`
+      : '👤';
+    bar.innerHTML = `${avatar}<div><div style="color:#f1f5f9;font-weight:700;font-size:13px">${user.displayName || user.email}</div><div style="font-size:11px;color:#64748b">${user.email}</div></div>`;
+  } else {
+    document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('migrateSection').style.display = 'none';
+  }
+});
+
+async function doLogin() {
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span style="width:16px;height:16px;border:2.5px solid #6366f1;border-top-color:transparent;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>กำลังนำไปหน้า Google...';
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithRedirect(provider);
+  } catch(e) {
+    btn.disabled = false;
+    btn.innerHTML = '<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"/>เข้าสู่ระบบด้วย Google';
+  }
+}
+
+async function migrate(type) {
+  if (!currentUser) return;
+  const btnId  = type === 'personal' ? 'btnPersonal' : 'btnCompany';
+  const btn    = document.getElementById(btnId);
+  const status = document.getElementById('status');
+
+  btn.disabled = true;
+  btn.innerHTML = `<span style="width:16px;height:16px;border:2.5px solid #fff;border-top-color:transparent;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span> กำลังย้ายข้อมูล ${type === 'personal' ? 'ส่วนตัว' : 'บริษัท'}...`;
+
+  status.className = 'status loading show';
+  status.textContent = `⏳ กำลังอ่านข้อมูลจาก budget/${type}...`;
+
+  try {
+    // อ่านจาก path เดิม (ไม่มี uid)
+    const oldSnap = await db.ref(`budget/${type}`).once('value');
+    const oldData = oldSnap.val();
+
+    if (!oldData) {
+      status.className = 'status info show';
+      status.innerHTML = `ℹ️ ไม่พบข้อมูลที่ <code>budget/${type}</code> — อาจถูกย้ายไปแล้วหรือไม่มีข้อมูล`;
+      btn.disabled = false;
+      btn.innerHTML = type === 'personal'
+        ? '👤 ย้ายข้อมูลส่วนตัว (budget/personal)'
+        : '🏢 ย้ายข้อมูลบริษัท (budget/company)';
+      return;
+    }
+
+    const txCount  = oldData.transactions?.length || 0;
+    const catCount = oldData.categories?.length   || 0;
+
+    status.textContent = `⏳ พบข้อมูล ${txCount} รายการ กำลังย้ายไปที่ budget/${currentUser.uid}/${type}...`;
+
+    // เขียนไปที่ path ใหม่ (มี uid)
+    const newPath = `budget/${currentUser.uid}/${type}`;
+    await db.ref(newPath).set(oldData);
+
+    status.className = 'status success show';
+    status.innerHTML = `✅ ย้ายสำเร็จ!<br>
+      📦 ${txCount} รายการ · ${catCount} หมวดหมู่<br>
+      📍 เก็บที่: <code style="font-size:11px">${newPath}</code><br><br>
+      <a href="https://dd-datahub.github.io/budget-tracker/"
+         style="color:#34d399;font-weight:700;text-decoration:none">
+        👉 ไปที่แอป Budget Tracker
+      </a>`;
+
+    btn.innerHTML = '✅ ย้ายเสร็จแล้ว';
+
+  } catch(e) {
+    status.className = 'status error show';
+    status.innerHTML = `❌ ย้ายไม่สำเร็จ: ${e.message}<br><small>ตรวจสอบ Firebase Rules ว่าอนุญาต read/write ตาม auth.uid</small>`;
+    btn.disabled = false;
+    btn.innerHTML = type === 'personal'
+      ? '👤 ย้ายข้อมูลส่วนตัว (budget/personal)'
+      : '🏢 ย้ายข้อมูลบริษัท (budget/company)';
+  }
+}
+</script>
+</body>
+</html>
