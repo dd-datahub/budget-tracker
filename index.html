@@ -13,6 +13,7 @@
   <script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDH8epGYAqBFATFo_K_VydE7cTVIIqM6YY",
@@ -24,7 +25,8 @@
       appId: "1:604852078953:web:a6c255cd84b681419495f8"
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    const db   = firebase.database();
+    const auth = firebase.auth();
   </script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
@@ -183,6 +185,45 @@ const S = {
 };
 const iconBtn = bg => ({background:bg+"22",border:"none",borderRadius:8,padding:"7px 9px",cursor:"pointer",fontSize:15});
 
+// ── Login Screen ───────────────────────────────────────────────────────────────
+function LoginScreen({onLogin, loginError}) {
+  const [loading, setLoading] = React.useState(false);
+  async function signIn() {
+    setLoading(true);
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+      await auth.signInWithPopup(provider);
+    } catch(e) {
+      console.error(e);
+      setLoading(false);
+    }
+  }
+  return (
+    <div style={{minHeight:"100dvh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(160deg,#0f172a 60%,#1e1b4b)",padding:24}}>
+      <div style={{fontSize:56,marginBottom:16}}>💰</div>
+      <div style={{fontSize:24,fontWeight:800,color:"#f1f5f9",marginBottom:6}}>Budget Tracker</div>
+      <div style={{fontSize:14,color:"#64748b",marginBottom:40,textAlign:"center"}}>บันทึกรายรับ-รายจ่ายส่วนตัว</div>
+      <div style={{background:"#1e293b",borderRadius:20,padding:"28px 24px",width:"min(360px,92vw)",border:"1px solid #334155",boxShadow:"0 20px 60px rgba(0,0,0,.5)"}}>
+        <div style={{fontSize:15,fontWeight:700,color:"#f1f5f9",marginBottom:6,textAlign:"center"}}>เข้าสู่ระบบ</div>
+        <div style={{fontSize:12,color:"#64748b",marginBottom:24,textAlign:"center"}}>ข้อมูลของคุณจะถูกเข้ารหัสและผูกกับ Google Account</div>
+        <button
+          onClick={signIn}
+          disabled={loading}
+          style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:12,padding:"14px 20px",background:loading?"#334155":"#fff",border:"none",borderRadius:12,cursor:loading?"not-allowed":"pointer",fontFamily:"inherit",fontWeight:700,fontSize:15,color:"#1a1a1a",transition:"all .2s"}}>
+          {loading
+            ? <><span style={{width:18,height:18,border:"2.5px solid #6366f1",borderTopColor:"transparent",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite"}}/>กำลังเข้าสู่ระบบ...</>
+            : <><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20"/>เข้าสู่ระบบด้วย Google</>
+          }
+        </button>
+        {loginError && <div style={{marginTop:14,padding:"10px 14px",background:"#f43f5e22",border:"1px solid #f43f5e44",borderRadius:10,fontSize:13,color:"#fca5a5",textAlign:"center"}}>{loginError}</div>}
+        <div style={{marginTop:20,padding:"12px 14px",background:"#0f172a",borderRadius:10,fontSize:12,color:"#64748b",lineHeight:1.6}}>
+          🔒 ข้อมูลจะถูกเก็บแยกตาม Google Account ของคุณ ไม่มีใครอื่นเข้าถึงได้
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────────
 function ModalSheet({children, onClose, center=false}) {
   return (
@@ -231,12 +272,15 @@ function TxCard({t,colorMap,onEdit,onDelete}) {
 
 // ── Profile config ──────────────────────────────────────────────────────────
 const PROFILES = {
-  personal: { label:"ส่วนตัว", icon:"👤", color:"#7c3aed", grad:"linear-gradient(135deg,#1e40af,#7c3aed)", path:"budget/personal" },
-  company:  { label:"บริษัท",  icon:"🏢", color:"#0ea5e9", grad:"linear-gradient(135deg,#0369a1,#0ea5e9)", path:"budget/company"  },
+  personal: { label:"ส่วนตัว", icon:"👤", color:"#7c3aed", grad:"linear-gradient(135deg,#1e40af,#7c3aed)" },
+  company:  { label:"บริษัท",  icon:"🏢", color:"#0ea5e9", grad:"linear-gradient(135deg,#0369a1,#0ea5e9)" },
 };
+// path จะถูกสร้างแบบ dynamic ตาม uid ของผู้ใช้
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 function App() {
+  const [user,         setUser]         = useState(undefined); // undefined=loading, null=not logged in
+  const [loginError,   setLoginError]   = useState("");
   const [profile,      setProfile]      = useState("personal");
   const [transactions, setTransactions] = useState([]);
   const [categories,   setCategories]   = useState(INIT_CATS);
@@ -248,7 +292,17 @@ function App() {
   const initialized = useRef(false);
   const saveTimer   = useRef(null);
 
+  // ── ติดตามสถานะ Login ──────────────────────────────────────────────────────
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(u => {
+      setUser(u || null);
+      if (!u) { setLoading(false); }
+    });
+    return () => unsub();
+  }, []);
+
   const prof = PROFILES[profile];
+  const dbPath = user ? `budget/${user.uid}/${profile}` : null;
 
   // ── สลับโปรไฟล์ ───────────────────────────────────────────────────────────
   function switchProfile(p) {
@@ -262,9 +316,11 @@ function App() {
     setProfile(p);
   }
 
-  // ── โหลดข้อมูลจาก Realtime Database เมื่อเปิดแอปหรือสลับโปรไฟล์ ─────────
+  // ── โหลดข้อมูลจาก Realtime Database เมื่อ login หรือสลับโปรไฟล์ ──────────
   useEffect(() => {
-    const ref = db.ref(PROFILES[profile].path);
+    if (!user) return;
+    const path = `budget/${user.uid}/${profile}`;
+    const ref = db.ref(path);
     ref.once("value").then(snapshot => {
       const data = snapshot.val();
       if (data) {
@@ -278,14 +334,15 @@ function App() {
       initialized.current = true;
       setLoading(false);
     });
-  }, [profile]);
+  }, [profile, user]);
 
   // ── บันทึกข้อมูลอัตโนมัติ ────────────────────────────────────────────────
   useEffect(() => {
-    if (!initialized.current) return;
+    if (!initialized.current || !user) return;
     setSaveStatus("saving");
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    const ref = db.ref(PROFILES[profile].path);
+    const path = `budget/${user.uid}/${profile}`;
+    const ref = db.ref(path);
     saveTimer.current = setTimeout(() => {
       ref.set({ transactions, categories })
         .then(() => {
@@ -431,6 +488,17 @@ function App() {
     {k:"categories", icon:"🏷️", label:"หมวด"},
   ];
 
+  // ── Auth Loading ────────────────────────────────────────────────────────────
+  if (user === undefined) return (
+    <div style={{background:"#0f172a",minHeight:"100dvh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14}}>
+      <div style={{fontSize:44}}>💰</div>
+      <div style={{width:38,height:38,border:"4px solid #334155",borderTop:"4px solid #6366f1",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>
+    </div>
+  );
+
+  // ── Login Screen ────────────────────────────────────────────────────────────
+  if (!user) return <LoginScreen loginError={loginError} />;
+
   // ── Loading screen ─────────────────────────────────────────────────────────
   if (loading) return (
     <div style={{background:"#0f172a",minHeight:"100dvh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14}}>
@@ -449,8 +517,8 @@ function App() {
         <div style={{background:"#7f1d1d",borderBottom:"2px solid #f43f5e",padding:"10px 14px",display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:16}}>❌</span>
           <div>
-            <div style={{fontWeight:700,fontSize:12,color:"#fca5a5"}}>บันทึกไม่สำเร็จ — แก้ Firebase Rules ก่อน</div>
-            <div style={{fontSize:10,color:"#fca5a5",opacity:.8}}>Realtime Database → Rules → ".read":true, ".write":true → Publish</div>
+            <div style={{fontWeight:700,fontSize:12,color:"#fca5a5"}}>บันทึกไม่สำเร็จ — ตรวจสอบ Firebase Rules</div>
+            <div style={{fontSize:10,color:"#fca5a5",opacity:.8}}>Realtime Database → Rules → ตั้งค่าตาม auth.uid → Publish</div>
           </div>
         </div>
       )}
@@ -478,6 +546,18 @@ function App() {
           <button onClick={()=>setViewYear(y=>y-1)} style={S.navBtn}>◀</button>
           <span style={{fontSize:15,fontWeight:700,minWidth:44,textAlign:"center"}}>{viewYear}</span>
           <button onClick={()=>setViewYear(y=>y+1)} style={S.navBtn}>▶</button>
+          {/* User Avatar + Sign Out */}
+          <div style={{position:"relative",marginLeft:4}}>
+            <button
+              onClick={()=>auth.signOut()}
+              title={`ออกจากระบบ (${user?.email})`}
+              style={{width:34,height:34,borderRadius:"50%",overflow:"hidden",border:"2px solid rgba(255,255,255,.3)",cursor:"pointer",padding:0,background:"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+              {user?.photoURL
+                ? <img src={user.photoURL} width="34" height="34" style={{borderRadius:"50%"}} referrerPolicy="no-referrer"/>
+                : <span style={{fontSize:16,color:"#fff",background:"rgba(255,255,255,.2)",width:34,height:34,display:"flex",alignItems:"center",justifyContent:"center",borderRadius:"50%"}}>👤</span>
+              }
+            </button>
+          </div>
         </div>
       </div>
 
